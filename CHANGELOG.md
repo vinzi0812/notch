@@ -2,7 +2,7 @@
 
 All notable changes to Notch. Versions follow [Semantic Versioning](https://semver.org): new features bump the minor version, fixes bump the patch version.
 
-## Unreleased
+## 1.3.0 — 2026-10-01
 
 ### Added
 - **Calendar layouts:** choose how the calendar page looks in a new **Calendar** tab in Settings, with a live preview: **Day strip** (the month's days in a scrolling row), **Month beside** (a month grid next to the day's events) or **Month above** (a month grid over the events, in a taller notch).

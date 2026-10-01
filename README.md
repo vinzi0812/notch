@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version 1.2.1" src="https://img.shields.io/badge/version-1.2.1-orange">
+  <img alt="Version 1.3.0" src="https://img.shields.io/badge/version-1.3.0-orange">
   <img alt="macOS 14 or later" src="https://img.shields.io/badge/macOS-14%2B-black">
   <img alt="Swift 6 and SwiftUI" src="https://img.shields.io/badge/Swift-6-F05138">
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue"></a>
@@ -62,7 +62,7 @@ Notch lives in the space around your camera. At rest it's just the notch, with a
 
 ## Installation
 
-1. Download **Notch-1.2.1.dmg** from the [latest release](../../releases/latest).
+1. Download **Notch-1.3.0.dmg** from the [latest release](../../releases/latest).
 2. Open it and drag **Notch** into **Applications**.
 3. Open Notch from Applications.
 
