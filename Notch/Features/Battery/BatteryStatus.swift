@@ -32,17 +32,33 @@ struct BatteryStatus: Equatable {
         )
     }
 
-    var symbolName: String {
-        if isCharging { return "battery.100percent.bolt" }
-        if isPluggedIn { return "powerplug.fill" }
+    /// How full to draw the battery, 0...1. Drawn rather than an SF Symbol, which only comes in
+    /// 0/25/50/75/100% (and only full when charging), so the icon shows the real level.
+    var fillFraction: Double {
+        min(max(Double(level) / 100, 0), 1)
+    }
 
-        switch level {
-        case ..<13: return "battery.0percent"
-        case ..<38: return "battery.25percent"
-        case ..<63: return "battery.50percent"
-        case ..<88: return "battery.75percent"
-        default:    return "battery.100percent"
-        }
+    /// The fill's color, like the menu bar's: green while charging, red when low on battery power.
+    enum Tint: Equatable {
+        case normal, charging, low
+    }
+
+    var tint: Tint {
+        if isCharging { return .charging }
+        if !isPluggedIn, level <= 20 { return .low }
+        return .normal
+    }
+
+    /// What's drawn on top: a bolt while charging, a plug when connected but not charging (e.g. held
+    /// at a limit by battery optimization), nothing on battery power.
+    enum Badge: Equatable {
+        case none, bolt, plug
+    }
+
+    var badge: Badge {
+        if isCharging { return .bolt }
+        if isPluggedIn { return .plug }
+        return .none
     }
 
     func isPlugIn(after previous: BatteryStatus?) -> Bool {

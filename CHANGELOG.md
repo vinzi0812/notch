@@ -2,6 +2,11 @@
 
 All notable changes to Notch. Versions follow [Semantic Versioning](https://semver.org): new features bump the minor version, fixes bump the patch version.
 
+## Unreleased
+
+### Fixed
+- The battery in the ears and widgets shows the real level: while charging it was always drawn full (with a bolt), and on battery it moved in 25% steps. It's now drawn like the menu bar's battery: filled to the exact level, green with a bolt while charging, a plug when connected but not charging, red when low.
+
 ## 1.3.0 — 2026-10-01
 
 ### Added

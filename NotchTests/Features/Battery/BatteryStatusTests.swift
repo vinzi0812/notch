@@ -59,26 +59,38 @@ struct BatteryStatusTests {
         #expect(BatteryStatus(description: description(max: nil)) == nil)
     }
 
-    @Test(arguments: [
-        (0, "battery.0percent"), (12, "battery.0percent"),
-        (13, "battery.25percent"), (37, "battery.25percent"),
-        (38, "battery.50percent"), (62, "battery.50percent"),
-        (63, "battery.75percent"), (87, "battery.75percent"),
-        (88, "battery.100percent"), (100, "battery.100percent"),
-    ])
-    func symbolMatchesLevelOnBattery(level: Int, symbol: String) {
-        let status = BatteryStatus(level: level, isCharging: false, isPluggedIn: false)
-        #expect(status.symbolName == symbol)
+    @Test(arguments: [(0, 0.0), (37, 0.37), (100, 1.0), (104, 1.0), (-3, 0.0)])
+    func theFillIsTheRealLevel(level: Int, fraction: Double) {
+        // The SF Symbols this replaced had five steps: 37% drew as a quarter.
+        #expect(BatteryStatus(level: level, isCharging: false, isPluggedIn: false).fillFraction == fraction)
     }
 
-    @Test func chargingShowsBoltRegardlessOfLevel() {
-        let status = BatteryStatus(level: 10, isCharging: true, isPluggedIn: true)
-        #expect(status.symbolName == "battery.100percent.bolt")
+    @Test func chargingShowsTheRealLevelInGreenWithABolt() {
+        // The SF Symbol drew a full battery with a bolt whatever the charge.
+        let status = BatteryStatus(level: 37, isCharging: true, isPluggedIn: true)
+        #expect(status.fillFraction == 0.37)
+        #expect(status.tint == .charging)
+        #expect(status.badge == .bolt)
     }
 
-    @Test func pluggedInNotChargingShowsPlug() {
+    @Test func pluggedInNotChargingShowsAPlug() {
         let status = BatteryStatus(level: 80, isCharging: false, isPluggedIn: true)
-        #expect(status.symbolName == "powerplug.fill")
+        #expect(status.badge == .plug)
+        #expect(status.tint == .normal)
+    }
+
+    @Test(arguments: [(20, BatteryStatus.Tint.low), (21, .normal), (5, .low)])
+    func lowOnBatteryPowerIsRed(level: Int, tint: BatteryStatus.Tint) {
+        #expect(BatteryStatus(level: level, isCharging: false, isPluggedIn: false).tint == tint)
+    }
+
+    @Test func lowButPluggedInIsNotRed() {
+        #expect(BatteryStatus(level: 10, isCharging: false, isPluggedIn: true).tint == .normal)
+        #expect(BatteryStatus(level: 10, isCharging: true, isPluggedIn: true).tint == .charging)
+    }
+
+    @Test func onBatteryPowerHasNoBadge() {
+        #expect(BatteryStatus(level: 60, isCharging: false, isPluggedIn: false).badge == .none)
     }
 
     @Test func plugInIsDetectedOnlyOnTheTransition() {

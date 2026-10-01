@@ -23,8 +23,7 @@ struct BatteryWidget: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 case .wide:
                     HStack(spacing: 10) {
-                        BatteryIcon(status: status)
-                            .font(.title)
+                        BatteryIcon(status: status, height: 18)
                         VStack(alignment: .leading, spacing: 1) {
                             BatteryPercentage(status: status)
                                 .font(.title3.bold())
