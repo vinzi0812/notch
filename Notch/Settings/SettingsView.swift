@@ -4,7 +4,7 @@ import SwiftUI
 /// left, controls on the right, explanations under each section. The window shows them as toolbar
 /// tabs (see `SettingsWindowController`).
 enum SettingsTab: CaseIterable {
-    case features, home, look, behavior, timer
+    case features, home, look, behavior, timer, calendar
 
     var title: String {
         switch self {
@@ -13,6 +13,7 @@ enum SettingsTab: CaseIterable {
         case .look: "Look"
         case .behavior: "Behavior"
         case .timer: "Timer"
+        case .calendar: "Calendar"
         }
     }
 
@@ -23,6 +24,7 @@ enum SettingsTab: CaseIterable {
         case .look: "paintbrush"
         case .behavior: "cursorarrow.motionlines"
         case .timer: "timer"
+        case .calendar: "calendar"
         }
     }
 
@@ -34,6 +36,7 @@ enum SettingsTab: CaseIterable {
         case .look: CGSize(width: 500, height: 440)
         case .behavior: CGSize(width: 500, height: 492)
         case .timer: CGSize(width: 500, height: 568)
+        case .calendar: CGSize(width: 500, height: 460)
         }
     }
 
@@ -46,6 +49,7 @@ enum SettingsTab: CaseIterable {
             case .look: LookSettings(settings: settings)
             case .behavior: BehaviorSettings(settings: settings)
             case .timer: TimerSettings(settings: settings)
+            case .calendar: CalendarSettings(settings: settings)
             }
         }
         .formStyle(.grouped)
@@ -143,7 +147,7 @@ private struct WidgetDiagramTile: View {
 
     var body: some View {
         VStack(spacing: 3) {
-            NotchIcon(name: widget.kind.symbol, size: widget.size == .small ? 16 : 20)
+            NotchIcon(name: widget.kind.symbol, size: widget.size == .small ? 14 : 18)
                 .font(.system(size: widget.size == .small ? 13 : 17, weight: .semibold))
             if widget.size != .small {
                 Text(widget.kind.title)
@@ -305,6 +309,109 @@ struct TimerSettings: View {
     }
 }
 
+/// The calendar page's layout, with a live preview of it.
+struct CalendarSettings: View {
+    @Bindable var settings: NotchSettings
+
+    var body: some View {
+        Form {
+            Section {
+                CalendarLayoutPreview(settings: settings)
+            }
+
+            Section {
+                Picker("Layout", selection: $settings.calendarLayout) {
+                    ForEach(CalendarLayout.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            } footer: {
+                Text(Self.explanation(settings.calendarLayout))
+                    .foregroundStyle(.secondary)
+            }
+
+            ResetSection { settings.resetCalendar() }
+        }
+    }
+
+    static func explanation(_ layout: CalendarLayout) -> String {
+        switch layout {
+        case .strip: "Every day of the month in a row you scroll, with the selected day's events below."
+        case .beside: "A month grid next to the selected day's events, in the usual tall notch."
+        case .above: "A month grid over the selected day's events. The notch grows taller on the calendar page to fit both."
+        }
+    }
+}
+
+/// The real calendar page, scaled down, with a few sample events around today: it springs between
+/// layouts (and grows for Month above) as the setting changes, and follows the chosen width and accent.
+private struct CalendarLayoutPreview: View {
+    let settings: NotchSettings
+
+    @State private var month = CalendarMonth(containing: .now)
+    @State private var selected = Calendar.current.startOfDay(for: .now)
+    private let events = CalendarLayoutPreview.sampleEvents()
+
+    var body: some View {
+        let width = settings.width.points
+        let height = NotchGeometry.expandedHeight + NotchGeometry.headlineHeight
+            + (settings.calendarLayout == .above ? NotchGeometry.calendarMonthAboveExtra : 0)
+        let scale = min(0.72, 420 / width)
+        let radius = settings.cornerRadius
+
+        ZStack(alignment: .top) {
+            UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius)
+                .fill(.black)
+            VStack(spacing: 0) {
+                Color.clear.frame(height: 32)   // the tab bar's band
+                CalendarPageContent(month: $month, selected: $selected, events: events)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 2)
+                    .padding(.bottom, 10)
+                    .frame(maxHeight: .infinity)
+            }
+            // The camera housing, for scale.
+            UnevenRoundedRectangle(bottomLeadingRadius: 8, bottomTrailingRadius: 8)
+                .fill(Color(white: 0.12))
+                .frame(width: 180, height: 32)
+        }
+        .frame(width: width, height: height)
+        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius))
+        .foregroundStyle(.white)
+        .environment(\.calendarLayout, settings.calendarLayout)
+        .environment(\.notchAccent, settings.accent.color)
+        .environment(\.colorScheme, .dark)
+        .allowsHitTesting(false)
+        .scaleEffect(scale, anchor: .top)
+        .frame(width: width * scale, height: height * scale, alignment: .top)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .animation(.spring(duration: 0.5, bounce: 0.3), value: settings.calendarLayout)
+        .animation(.spring(duration: 0.5, bounce: 0.3), value: settings.width)
+    }
+
+    /// A believable day: a call, a review, something tomorrow, a birthday later in the week.
+    static func sampleEvents(now: Date = .now) -> [CalendarEvent] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        func at(_ dayOffset: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+            calendar.date(byAdding: DateComponents(day: dayOffset, hour: hour, minute: minute), to: today)!
+        }
+        let blue = CalendarEvent.EventColor(red: 0.2, green: 0.55, blue: 1)
+        let purple = CalendarEvent.EventColor(red: 0.7, green: 0.45, blue: 1)
+        let green = CalendarEvent.EventColor(red: 0.3, green: 0.8, blue: 0.4)
+        return [
+            CalendarEvent(id: "standup", title: "Team standup", start: at(0, 10), end: at(0, 10, 15), isAllDay: false,
+                          color: blue, callURL: URL(string: "https://meet.google.com/abc-defg-hij")),
+            CalendarEvent(id: "review", title: "Design review", start: at(0, 14, 30), end: at(0, 15, 30), isAllDay: false,
+                          color: purple, location: "Room 4B"),
+            CalendarEvent(id: "gym", title: "Gym", start: at(0, 18), end: at(0, 19), isAllDay: false, color: green),
+            CalendarEvent(id: "lunch", title: "Lunch with Sam", start: at(1, 13), end: at(1, 14), isAllDay: false, color: green),
+            CalendarEvent(id: "birthday", title: "Birthday", start: at(3, 0), end: at(4, 0), isAllDay: true, color: purple),
+            CalendarEvent(id: "planning", title: "Sprint planning", start: at(-4, 10), end: at(-4, 11), isAllDay: false, color: blue),
+        ]
+    }
+}
+
 /// A slider that snaps to `step` without drawing a tick mark for every step (which `Slider`'s own
 /// `step:` does), with its value shown beside it.
 private struct SteppedSlider: View {
@@ -401,18 +508,11 @@ private struct FeatureRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Group {
-                if NotchIcon.isAppIcon(feature.symbol) {
-                    // An app's own icon is already a tile.
-                    NotchIcon(name: feature.symbol, size: 28)
-                } else {
-                    Image(systemName: feature.symbol)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 26, height: 26)
-                        .background(.tint, in: .rect(cornerRadius: 6))
-                }
-            }
+            NotchIcon(name: feature.symbol, size: 16)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 26, height: 26)
+                .background(.tint, in: .rect(cornerRadius: 6))
             VStack(alignment: .leading, spacing: 2) {
                 Text(feature.title)
                 Text(feature.summary)

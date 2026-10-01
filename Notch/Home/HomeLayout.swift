@@ -67,7 +67,7 @@ enum HomeWidgetKind: String, CaseIterable, Codable, Identifiable {
         case .temperature: "thermometer.medium"
         case .devices: "airpods.pro"
         case .notes: "note.text"
-        case .calculator: "app:com.apple.calculator"   // SF Symbols has no calculator
+        case .calculator: NotchIcon.calculator   // our own glyph: SF Symbols has no calculator
         }
     }
 }

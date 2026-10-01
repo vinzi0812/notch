@@ -47,9 +47,30 @@ enum NotchAccent: String, CaseIterable, Identifiable {
     }
 }
 
+/// How the calendar page lays out the month and the selected day's events.
+enum CalendarLayout: String, CaseIterable, Identifiable {
+    /// Every day of the month in a scrolling strip, the events below.
+    case strip
+    /// A month grid on the left, the events on the right.
+    case beside
+    /// A month grid on top, the events below; the notch grows taller for it.
+    case above
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .strip: "Day strip"
+        case .beside: "Month beside"
+        case .above: "Month above"
+        }
+    }
+}
+
 extension EnvironmentValues {
     /// The user's accent, set once at the top of the notch so any feature's view can read it.
     @Entry var notchAccent: Color = NotchAccent.orange.color
     /// The timer page's preset chips, in seconds; empty when the user turned them off.
     @Entry var timerPresets: [TimeInterval] = []
+    @Entry var calendarLayout: CalendarLayout = .strip
 }

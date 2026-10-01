@@ -66,20 +66,32 @@ final class NotchViewModel {
     /// The expanded notch is tall for the player row on Home, or for a page that asks for it.
     var isTall: Bool { showsHeadline || selectedTabModule?.wantsTallPage == true }
 
-    @ObservationIgnored private var keepsTallHover = false
+    /// The open notch's height: normal, tall (the player row or a tall page), or taller still for a
+    /// page that needs it (the calendar's month-above layout).
+    var expandedHeight: CGFloat {
+        guard isTall else { return NotchGeometry.expandedHeight }
+        return geometry.tallHeight + pageExtraHeight
+    }
 
-    /// Whether hover should use the tall shape. When the notch shrinks away from a pointer that
-    /// hasn't moved (e.g. pressing Start Timer near the bottom), that isn't the user leaving: the
-    /// tall shape keeps counting for as long as the pointer stays inside it. Once it moves out,
-    /// normal hover resumes. (Based on where the pointer is, not on a timeout.)
-    func hoverIsTall(pointerInTallShape: Bool) -> Bool {
-        if isTall {
-            keepsTallHover = true
-            return true
+    private var pageExtraHeight: CGFloat {
+        selectedTab == ObjectIdentifier(calendar) && settings.calendarLayout == .above ? NotchGeometry.calendarMonthAboveExtra : 0
+    }
+
+    @ObservationIgnored private var heldHoverHeight: CGFloat = 0
+
+    /// The height hover should use. When the notch shrinks away from a pointer that hasn't moved
+    /// (e.g. pressing Start Timer near the bottom, or leaving the month-above calendar), that isn't
+    /// the user leaving: the larger shape keeps counting for as long as the pointer stays inside it.
+    /// Once it moves out, normal hover resumes. (Based on where the pointer is, not on a timeout.)
+    func hoverHeight(pointerInside: (CGFloat) -> Bool) -> CGFloat {
+        let current = expandedHeight
+        if current >= heldHoverHeight {
+            heldHoverHeight = current
+            return current
         }
-        if keepsTallHover, pointerInTallShape { return true }
-        keepsTallHover = false
-        return false
+        if pointerInside(heldHoverHeight) { return heldHoverHeight }
+        heldHoverHeight = current
+        return current
     }
 
     func select(tab module: (any NotchModule)?) {
@@ -229,7 +241,7 @@ final class NotchViewModel {
             withAnimation(NotchMotion.expandCollapse(speed: settings.animationSpeed.multiplier)) {
                 presentation = .collapsed
                 selectedTab = nil
-                keepsTallHover = false
+                heldHoverHeight = 0
             }
             collapseTask = nil
         }

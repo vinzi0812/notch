@@ -33,7 +33,7 @@ Notch lives in the space around your camera. At rest it's just the notch, with a
 
 **Tools**
 - **Timer** with an iOS-style ruler, presets and a notification when it ends.
-- **Calendar** with a month strip, the day's events, and **Join** for Meet, Zoom, Teams, FaceTime and Webex calls.
+- **Calendar** with the day's events and **Join** for Meet, Zoom, Teams, FaceTime and Webex calls, laid out as a day strip or a month grid beside or above the events.
 - **Files**: a shelf to drop files on and drag them out again later.
 - **Notes**: quick notes you type right in the notch.
 - **Calculator** with a keypad, live results and history.

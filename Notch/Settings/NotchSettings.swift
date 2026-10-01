@@ -30,6 +30,10 @@ final class NotchSettings {
     var showsEars: Bool {
         didSet { save(showsEars, Keys.showsEars); onGeometryChanged?() }
     }
+    /// The calendar page's layout. Month above needs a taller notch, so it reports a geometry change.
+    var calendarLayout: CalendarLayout {
+        didSet { save(calendarLayout.rawValue, Keys.calendarLayout); onGeometryChanged?() }
+    }
 
     /// How long the pointer rests on the notch before it opens, in seconds (0 = instantly).
     var hoverDelay: Double {
@@ -101,6 +105,7 @@ final class NotchSettings {
         cornerRadius = (defaults.object(forKey: Keys.cornerRadius) as? Double)?.clamped(to: Self.cornerRadiusRange) ?? Self.defaultCornerRadius
         accent = defaults.string(forKey: Keys.accent).flatMap(NotchAccent.init(rawValue:)) ?? .orange
         showsEars = defaults.object(forKey: Keys.showsEars) as? Bool ?? true
+        calendarLayout = defaults.string(forKey: Keys.calendarLayout).flatMap(CalendarLayout.init(rawValue:)) ?? .strip
         hoverDelay = (defaults.object(forKey: Keys.hoverDelay) as? Double)?.clamped(to: Self.hoverDelayRange) ?? 0
         animationSpeed = defaults.string(forKey: Keys.animationSpeed).flatMap(AnimationSpeed.init(rawValue:)) ?? .standard
         mutedPopUps = Set(Self.features(forKey: Keys.mutedPopUps, in: defaults))
@@ -192,6 +197,12 @@ final class NotchSettings {
         save([String](), Keys.mutedPopUps)
     }
 
+    // MARK: - Calendar
+
+    func resetCalendar() {
+        calendarLayout = .strip
+    }
+
     // MARK: - Timer
 
     /// Sets one of the preset chips, in minutes (whole minutes, 1 to 120).
@@ -225,6 +236,7 @@ final class NotchSettings {
         static let cornerRadius = "settings.cornerRadius"
         static let accent = "settings.accent"
         static let showsEars = "settings.showsEars"
+        static let calendarLayout = "settings.calendarLayout"
         static let hoverDelay = "settings.hoverDelaySeconds"
         static let animationSpeed = "settings.animationSpeed"
         static let mutedPopUps = "settings.mutedPopUps"

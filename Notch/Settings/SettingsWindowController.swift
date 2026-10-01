@@ -28,10 +28,12 @@ final class SettingsWindowController {
     private func makeWindow() -> NSWindow {
         let tabs = SettingsTabViewController()
         tabs.tabStyle = .toolbar
+        // A fixed title rather than the selected tab's name (the macOS default): "Home" in the title
+        // bar reads like the notch's Home page, not like settings. The toolbar shows which tab is open.
+        tabs.canPropagateSelectedChildViewControllerTitle = false
         for tab in SettingsTab.allCases {
             let host = NSHostingController(rootView: tab.view(settings: settings))
             host.preferredContentSize = tab.size
-            host.title = tab.title   // the tab controller shows the selected tab's title in the title bar
             let item = NSTabViewItem(viewController: host)
             item.label = tab.title
             item.image = NSImage(systemSymbolName: tab.symbol, accessibilityDescription: tab.title)
@@ -40,6 +42,7 @@ final class SettingsWindowController {
 
         let window = NSWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable, .miniaturizable]
+        window.title = "Notch Settings"
         window.toolbarStyle = .preference
         // Kept and reused, so reopening is instant and remembers the selected tab.
         window.isReleasedWhenClosed = false

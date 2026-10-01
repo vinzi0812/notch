@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import Notch
@@ -96,5 +97,64 @@ struct CalendarWidgetTests {
         model.expand()
         model.select(tab: model.calendar)
         #expect(model.isTall)
+    }
+}
+
+@MainActor
+struct CalendarLayoutTests {
+    private func calendar(firstWeekday: Int) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.firstWeekday = firstWeekday
+        return calendar
+    }
+
+    private func date(_ year: Int, _ month: Int, _ day: Int, in calendar: Calendar) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+
+    @Test func weeksAreWholeAndStartOnTheUsersFirstWeekday() {
+        let sundays = calendar(firstWeekday: 1)
+        let september = CalendarMonth(containing: date(2026, 9, 15, in: sundays), calendar: sundays)
+        let weeks = september.weeks(calendar: sundays)
+        #expect(weeks.allSatisfy { $0.count == 7 })
+        #expect(weeks.count == 5)
+        #expect(weeks.first?.first == date(2026, 8, 30, in: sundays), "1 September 2026 is a Tuesday")
+        #expect(weeks.last?.last == date(2026, 10, 3, in: sundays))
+
+        let mondays = calendar(firstWeekday: 2)
+        #expect(september.weeks(calendar: mondays).first?.first == date(2026, 8, 31, in: mondays))
+    }
+
+    @Test func everyDayOfTheMonthIsInTheGrid() {
+        let gregorian = calendar(firstWeekday: 1)
+        let month = CalendarMonth(containing: date(2027, 2, 10, in: gregorian), calendar: gregorian)
+        let gridDays = Set(month.weeks(calendar: gregorian).flatMap { $0 })
+        #expect(month.days(calendar: gregorian).allSatisfy(gridDays.contains))
+    }
+
+    @Test func weekdayInitialsFollowTheFirstWeekday() {
+        #expect(CalendarMonth.weekdaySymbols(calendar: calendar(firstWeekday: 1)).first == "S")
+        #expect(CalendarMonth.weekdaySymbols(calendar: calendar(firstWeekday: 2)) == ["M", "T", "W", "T", "F", "S", "S"])
+    }
+
+    @Test func theLayoutIsSavedAndResizesThePanel() {
+        let suite = "CalendarLayoutTests.\(UUID().uuidString)"
+        let settings = NotchSettings(defaults: UserDefaults(suiteName: suite)!)
+        #expect(settings.calendarLayout == .strip)
+        var geometryChanges = 0
+        settings.onGeometryChanged = { geometryChanges += 1 }
+        settings.calendarLayout = .above
+        #expect(geometryChanges == 1, "month above needs a taller panel")
+        #expect(NotchSettings(defaults: UserDefaults(suiteName: suite)!).calendarLayout == .above)
+        settings.resetCalendar()
+        #expect(settings.calendarLayout == .strip)
+    }
+
+    @Test func thePanelGrowsOnlyForTheTallLayout() {
+        var geometry = NotchGeometry.previewHardware
+        let usual = geometry.panelSize.height
+        geometry.extraPageHeight = NotchGeometry.calendarMonthAboveExtra
+        #expect(geometry.panelSize.height == usual + NotchGeometry.calendarMonthAboveExtra)
+        #expect(geometry.panelRect.contains(geometry.expandedRect(height: geometry.tallHeight + NotchGeometry.calendarMonthAboveExtra)))
     }
 }

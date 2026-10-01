@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The calendar page, opened from the Calendar widget: the month's days in a strip, and the selected
-/// day's events below.
+/// The calendar page, opened from the Calendar widget: the month to browse, and the selected day's
+/// events, laid out the way the user chose in Settings (a day strip, or a month grid beside or above).
 struct CalendarPage: View {
     let calendar: CalendarMonitor
 
@@ -30,13 +30,37 @@ struct CalendarPageContent: View {
     @Binding var month: CalendarMonth
     @Binding var selected: Date
     let events: [CalendarEvent]
+    @Environment(\.calendarLayout) private var layout
+
+    private var busyDays: Set<Date> { CalendarEvent.busyDays(in: events) }
+    private var dayEvents: [CalendarEvent] { CalendarEvent.events(on: selected, in: events) }
 
     var body: some View {
-        VStack(spacing: 8) {
-            MonthHeader(month: $month, selected: $selected)
-            MonthStrip(month: month, selected: $selected, busyDays: CalendarEvent.busyDays(in: events))
-            Divider().overlay(.white.opacity(0.15))
-            DayEvents(day: selected, events: CalendarEvent.events(on: selected, in: events))
+        switch layout {
+        case .strip:
+            VStack(spacing: 8) {
+                MonthHeader(month: $month, selected: $selected)
+                MonthStrip(month: month, selected: $selected, busyDays: busyDays)
+                Divider().overlay(.white.opacity(0.15))
+                DayEvents(day: selected, events: dayEvents)
+            }
+        case .beside:
+            HStack(alignment: .top, spacing: 18) {
+                VStack(spacing: 6) {
+                    MonthHeader(month: $month, selected: $selected, compact: true)
+                    MonthGridView(month: month, selected: $selected, busyDays: busyDays, rowHeight: 19)
+                }
+                .frame(width: 200)
+                Divider().overlay(.white.opacity(0.15))
+                DayEvents(day: selected, events: dayEvents)
+            }
+        case .above:
+            VStack(spacing: 8) {
+                MonthHeader(month: $month, selected: $selected)
+                MonthGridView(month: month, selected: $selected, busyDays: busyDays, rowHeight: 22)
+                Divider().overlay(.white.opacity(0.15))
+                DayEvents(day: selected, events: dayEvents)
+            }
         }
     }
 }
@@ -45,11 +69,13 @@ struct CalendarPageContent: View {
 private struct MonthHeader: View {
     @Binding var month: CalendarMonth
     @Binding var selected: Date
+    /// Beside the events there's less room: a shorter month name.
+    var compact = false
 
     var body: some View {
         HStack(spacing: 6) {
-            Text(month.start.formatted(.dateTime.month(.wide).year()))
-                .font(.system(size: 15, weight: .semibold))
+            Text(month.start.formatted(.dateTime.month(compact ? .abbreviated : .wide).year()))
+                .font(.system(size: compact ? 13 : 15, weight: .semibold))
                 .contentTransition(.numericText())
             Spacer()
             if !Calendar.current.isDate(selected, inSameDayAs: .now) {
@@ -83,6 +109,69 @@ private struct MonthHeader: View {
                 .frame(width: 22, height: 22)
                 .glassControl(in: Circle())
         }
+    }
+}
+
+/// The month's weeks with weekday initials: today in the accent, the selected day filled, a dot
+/// under days with events.
+private struct MonthGridView: View {
+    let month: CalendarMonth
+    @Binding var selected: Date
+    let busyDays: Set<Date>
+    let rowHeight: CGFloat
+    @Environment(\.notchAccent) private var accent
+
+    var body: some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 0) {
+                ForEach(Array(CalendarMonth.weekdaySymbols().enumerated()), id: \.offset) { _, symbol in
+                    Text(symbol)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            ForEach(month.weeks(), id: \.first) { week in
+                HStack(spacing: 0) {
+                    ForEach(week, id: \.self) { day in
+                        DayCell(day: day, inMonth: month.contains(day), isSelected: day == selected,
+                                isBusy: busyDays.contains(day), accent: accent, height: rowHeight)
+                            .onTapGesture { withAnimation(.snappy) { selected = day } }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct DayCell: View {
+    let day: Date
+    let inMonth: Bool
+    let isSelected: Bool
+    let isBusy: Bool
+    let accent: Color
+    let height: CGFloat
+
+    private var isToday: Bool { Calendar.current.isDateInToday(day) }
+
+    var body: some View {
+        Text(day.formatted(.dateTime.day()))
+            .font(.system(size: height * 0.52, weight: isToday || isSelected ? .bold : .regular))
+            .monospacedDigit()
+            .foregroundStyle(isSelected ? .black : isToday ? accent : .white.opacity(inMonth ? 0.9 : 0.3))
+            .frame(width: height + 2, height: height)
+            .background {
+                if isSelected {
+                    Circle().fill(isToday ? accent : .white)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if isBusy && !isSelected {
+                    Circle().fill(accent.opacity(inMonth ? 1 : 0.4)).frame(width: 3, height: 3).offset(y: 2)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
     }
 }
 

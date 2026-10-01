@@ -222,9 +222,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         followMenuBar()
         
         let mouse = NSEvent.mouseLocation
-        let tallShape = viewModel.geometry.hoverTarget(isExpanded: true, hasHeadline: true, isDraggingFile: false)
-        let hoverIsTall = viewModel.hoverIsTall(pointerInTallShape: tallShape.contains(mouse))
-        let activeRect = viewModel.geometry.hoverTarget(isExpanded: viewModel.isExpanded, hasHeadline: hoverIsTall, isDraggingFile: isDraggingFile)
+        let geometry = viewModel.geometry
+        let height = viewModel.hoverHeight { geometry.hoverTarget(isExpanded: true, height: $0, isDraggingFile: false).contains(mouse) }
+        let activeRect = geometry.hoverTarget(isExpanded: viewModel.isExpanded, height: height, isDraggingFile: isDraggingFile)
         
         if activeRect.contains(mouse) {
             viewModel.pointerEntered(isDraggingFile: isDraggingFile)
@@ -244,6 +244,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var geometry = NotchGeometry(screen: screen)
         geometry.expandedWidth = settings.width.points
         geometry.showsEars = settings.showsEars && !menusReachEars
+        geometry.extraPageHeight = settings.calendarLayout == .above ? NotchGeometry.calendarMonthAboveExtra : 0
         return geometry
     }
     

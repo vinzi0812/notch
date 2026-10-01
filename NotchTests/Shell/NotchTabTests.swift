@@ -65,24 +65,55 @@ struct NotchTabTests {
         model.timer.reset()
     }
 
+    /// What `hoverHeight` returns when the pointer is inside (or outside) every shape it asks about.
+    private func hover(_ model: NotchViewModel, pointerInside: Bool) -> CGFloat {
+        model.hoverHeight { _ in pointerInside }
+    }
+
     @Test func shrinkingUnderThePointerIsNotLeaving() {
         let model = model()
         model.expand()
         model.select(tab: model.timer)
-        #expect(model.hoverIsTall(pointerInTallShape: true))
+        let tall = model.geometry.tallHeight
+        #expect(hover(model, pointerInside: true) == tall)
         model.timer.start()
         #expect(!model.isTall)
-        #expect(model.hoverIsTall(pointerInTallShape: true), "pointer still where the tall notch was: stay open")
-        #expect(model.hoverIsTall(pointerInTallShape: true), "no matter how long it stays there")
-        #expect(!model.hoverIsTall(pointerInTallShape: false), "moved out: normal hover")
-        #expect(!model.hoverIsTall(pointerInTallShape: true), "and moving back doesn't revive it")
+        #expect(hover(model, pointerInside: true) == tall, "pointer still where the tall notch was: stay open")
+        #expect(hover(model, pointerInside: true) == tall, "no matter how long it stays there")
+        #expect(hover(model, pointerInside: false) == NotchGeometry.expandedHeight, "moved out: normal hover")
+        #expect(hover(model, pointerInside: true) == NotchGeometry.expandedHeight, "and moving back doesn't revive it")
         model.timer.reset()
     }
 
     @Test func aNotchThatWasNeverTallHasNoGrace() {
         let model = model()
         model.expand()
-        #expect(!model.hoverIsTall(pointerInTallShape: true))
+        #expect(hover(model, pointerInside: true) == NotchGeometry.expandedHeight)
+    }
+
+    @Test func theMonthAboveCalendarIsTallerStill() {
+        let settings = NotchSettings.ephemeral()
+        settings.calendarLayout = .above
+        let model = NotchViewModel(geometry: .previewHardware, settings: settings)
+        model.expand()
+        model.select(tab: model.calendar)
+        #expect(model.expandedHeight == model.geometry.tallHeight + NotchGeometry.calendarMonthAboveExtra)
+
+        settings.calendarLayout = .strip
+        #expect(model.expandedHeight == model.geometry.tallHeight, "the other layouts fit the usual tall notch")
+    }
+
+    @Test func leavingTheTallCalendarKeepsItsShapeUnderThePointer() {
+        let settings = NotchSettings.ephemeral()
+        settings.calendarLayout = .above
+        let model = NotchViewModel(geometry: .previewHardware, settings: settings)
+        model.expand()
+        model.select(tab: model.calendar)
+        let tallest = model.expandedHeight
+        #expect(hover(model, pointerInside: true) == tallest)
+        model.select(tab: model.shelf)   // a short page
+        #expect(hover(model, pointerInside: true) == tallest, "pointer low on where the calendar was: stay open")
+        #expect(hover(model, pointerInside: false) == model.expandedHeight)
     }
 }
 

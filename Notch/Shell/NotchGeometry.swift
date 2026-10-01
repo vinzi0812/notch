@@ -19,13 +19,27 @@ struct NotchGeometry {
     /// Whether the collapsed notch has ears beside the camera; without them it's just the notch.
     var showsEars = true
 
+    /// How much taller than "tall" a page may make the notch: the calendar's month-above layout.
+    /// Zero unless that layout is chosen, so the panel only grows when something uses the room.
+    var extraPageHeight: CGFloat = 0
+
+    /// The month-above calendar's extra height (a 330 pt notch instead of 224).
+    static let calendarMonthAboveExtra: CGFloat = 106
+
+    /// The notch with the player row or a tall page.
+    var tallHeight: CGFloat { Self.expandedHeight + Self.headlineHeight }
+
+    func expandedSize(height: CGFloat) -> CGSize {
+        CGSize(width: expandedWidth, height: height)
+    }
+
     func expandedSize(withHeadline: Bool) -> CGSize {
-        CGSize(width: expandedWidth, height: Self.expandedHeight + (withHeadline ? Self.headlineHeight : 0))
+        expandedSize(height: withHeadline ? tallHeight : Self.expandedHeight)
     }
 
     /// The panel is sized for the tallest state, so it never resizes while in use; the shape grows
-    /// inside it. (It's rebuilt when the screen or the chosen width changes.)
-    var panelSize: CGSize { expandedSize(withHeadline: true) }
+    /// inside it. (It's rebuilt when the screen, the chosen width or the calendar layout changes.)
+    var panelSize: CGSize { expandedSize(height: tallHeight + extraPageHeight) }
     static let activityEarWidth: CGFloat = 80
     static let activityDetailHeight: CGFloat = 26
     let screenFrame: CGRect
@@ -86,9 +100,14 @@ struct NotchGeometry {
     /// A file drag opens it from anywhere over the expanded area, so the user never has to
     /// push against the top edge of the screen, which would trigger Mission Control.
     func hoverTarget(isExpanded: Bool, hasHeadline: Bool = false, isDraggingFile: Bool) -> CGRect {
+        hoverTarget(isExpanded: isExpanded, height: hasHeadline ? tallHeight : Self.expandedHeight, isDraggingFile: isDraggingFile)
+    }
+
+    /// The same, for an open notch of any height.
+    func hoverTarget(isExpanded: Bool, height: CGFloat, isDraggingFile: Bool) -> CGRect {
         let target: CGRect
         if isExpanded {
-            target = expandedRect(withHeadline: hasHeadline)
+            target = expandedRect(height: height)
         } else if isDraggingFile {
             target = expandedRect(withHeadline: false)
         } else {
@@ -99,7 +118,11 @@ struct NotchGeometry {
 
     /// Where the expanded shape actually is: the visible part of the panel.
     func expandedRect(withHeadline: Bool) -> CGRect {
-        let size = expandedSize(withHeadline: withHeadline)
+        expandedRect(height: withHeadline ? tallHeight : Self.expandedHeight)
+    }
+
+    func expandedRect(height: CGFloat) -> CGRect {
+        let size = expandedSize(height: height)
         return CGRect(x: notchRect.midX - size.width / 2, y: screenFrame.maxY - size.height, width: size.width, height: size.height)
     }
 

@@ -5,7 +5,7 @@ extension CalculatorModel: NotchModule {
     var earPriority: Int? { nil }
 
     /// An icon beside the mirror, on the right of the camera.
-    var tab: NotchTab? { NotchTab(title: "Calculator", symbol: "app:com.apple.calculator", style: .button) }
+    var tab: NotchTab? { NotchTab(title: "Calculator", symbol: NotchIcon.calculator, style: .button) }
 
     var wantsTallPage: Bool { true }
 
@@ -160,7 +160,7 @@ struct CalculatorWidget: View {
             Label {
                 Text("Calculator")
             } icon: {
-                NotchIcon(name: "app:com.apple.calculator", size: 12)
+                NotchIcon(name: NotchIcon.calculator, size: 11)
             }
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.6))

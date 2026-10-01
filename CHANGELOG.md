@@ -2,6 +2,15 @@
 
 All notable changes to Notch. Versions follow [Semantic Versioning](https://semver.org): new features bump the minor version, fixes bump the patch version.
 
+## Unreleased
+
+### Added
+- **Calendar layouts:** choose how the calendar page looks in a new **Calendar** tab in Settings, with a live preview: **Day strip** (the month's days in a scrolling row), **Month beside** (a month grid next to the day's events) or **Month above** (a month grid over the events, in a taller notch).
+
+### Changed
+- The Calculator's icon is a monochrome calculator glyph like the other icons, instead of the Calculator app's colored icon.
+- The Settings window is titled **Notch Settings** instead of the selected tab's name, which read like the notch's own Home page.
+
 ## 1.2.1 — 2026-09-28
 
 ### Added
