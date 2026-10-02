@@ -30,4 +30,10 @@ enum NowPlayingScripting {
         NSAppleScript(source: source)?.executeAndReturnError(&error)
         return error == nil
     }
+
+    /// The AppleScript to seek to `position` seconds in the app, or nil if the app isn't scriptable.
+    static func seekSource(to position: TimeInterval, in bundleIdentifier: String) -> String? {
+        guard supports(bundleIdentifier) else { return nil }
+        return "tell application id \"\(bundleIdentifier)\" to set player position to \(position)"
+    }
 }

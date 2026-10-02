@@ -54,6 +54,10 @@ private struct PlayerRow: View {
     let monitor: NowPlayingMonitor
     let info: NowPlayingInfo
 
+    private var canSeek: Bool {
+        monitor.route(for: info) != .openApp
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             ArtworkTile(info: info)
@@ -68,7 +72,7 @@ private struct PlayerRow: View {
                     .foregroundStyle(.white.opacity(0.6))
                     .lineLimit(1)
                 if info.duration > 0 {
-                    PlaybackProgress(info: info)
+                    PlaybackProgress(info: info, monitor: monitor, canSeek: canSeek)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -168,35 +172,101 @@ private struct PlayerSwitcher: View {
     }
 }
 
-/// A thin progress line with elapsed and remaining time, redrawn once a second from the extrapolated position.
+/// A thin progress line with elapsed and remaining time. Tap or drag the bar to seek.
 private struct PlaybackProgress: View {
     let info: NowPlayingInfo
+    let monitor: NowPlayingMonitor
+    let canSeek: Bool
     @Environment(\.notchAccent) private var accent
+    @State private var isDragging = false
+    @State private var dragFraction: CGFloat?
+    /// Holds the seek position after release so the bar doesn't snap back before the player updates.
+    @State private var seekedFraction: CGFloat?
+    @State private var seekHoldTask: Task<Void, Never>?
+    @State private var isHovering = false
+
+    /// The fraction to display, choosing the most specific override available.
+    private func activeFraction(live: CGFloat) -> CGFloat {
+        dragFraction ?? seekedFraction ?? live
+    }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let elapsed = info.elapsed(at: context.date)
+            let liveFraction = info.duration > 0 ? elapsed / info.duration : 0
+            let fraction = activeFraction(live: liveFraction)
+            let displayElapsed = fraction * info.duration
             HStack(spacing: 6) {
-                Text(Self.format(elapsed))
+                Text(Self.format(displayElapsed))
                 GeometryReader { proxy in
-                    Capsule()
-                        .fill(.white.opacity(0.25))
-                        .overlay(alignment: .leading) {
-                            Capsule()
-                                .fill(accent)
-                                .frame(width: proxy.size.width * min(1, elapsed / info.duration))
-                        }
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(.white.opacity(0.25))
+                        Capsule()
+                            .fill(accent)
+                            .frame(width: proxy.size.width * min(1, max(0, fraction)))
+                    }
+                    .contentShape(Rectangle())
+                    .if(canSeek) { view in
+                        view.gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    isDragging = true
+                                    seekHoldTask?.cancel()
+                                    let newFraction = min(1, max(0, value.location.x / proxy.size.width))
+                                    // Instant feedback while scrubbing — no animation delay.
+                                    dragFraction = newFraction
+                                    seekedFraction = nil
+                                }
+                                .onEnded { value in
+                                    let finalFraction = min(1, max(0, value.location.x / proxy.size.width))
+                                    let seekPosition = finalFraction * info.duration
+                                    monitor.seek(to: seekPosition)
+                                    // Slide the bar to the tapped position.
+                                    withAnimation(.smooth(duration: 0.3)) {
+                                        dragFraction = nil
+                                        seekedFraction = finalFraction
+                                        isDragging = false
+                                    }
+                                    // Hold until the player reports back, then fade out smoothly.
+                                    seekHoldTask?.cancel()
+                                    seekHoldTask = Task {
+                                        try? await Task.sleep(for: .seconds(2.5))
+                                        guard !Task.isCancelled else { return }
+                                        withAnimation(.smooth(duration: 0.4)) {
+                                            seekedFraction = nil
+                                        }
+                                    }
+                                }
+                        )
+                    }
                 }
-                .frame(height: 3)
-                Text("-" + Self.format(info.duration - elapsed))
+                .frame(height: canSeek && (isHovering || isDragging) ? 6 : 3)
+                .animation(.easeOut(duration: 0.15), value: canSeek && isHovering)
+                .animation(.easeOut(duration: 0.15), value: canSeek && isDragging)
+                .onHover { hovering in if canSeek { isHovering = hovering } }
+                Text("-" + Self.format(info.duration - displayElapsed))
             }
             .font(.system(size: 9).monospacedDigit())
             .foregroundStyle(.white.opacity(0.6))
+            // Suppress animation on every 1-second timeline tick so the bar doesn't jitter.
+            .transaction { $0.animation = nil }
         }
     }
 
     private static func format(_ seconds: TimeInterval) -> String {
         Duration.seconds(Int(max(0, seconds))).formatted(.time(pattern: .minuteSecond))
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
     }
 }
 

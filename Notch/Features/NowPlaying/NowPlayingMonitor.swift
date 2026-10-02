@@ -154,6 +154,21 @@ final class NowPlayingMonitor {
         selectedID = player.id
     }
 
+    /// Seeks the shown player to `position` seconds, using the best route for that player.
+    func seek(to position: TimeInterval) {
+        guard let info else { return }
+        switch route(for: info) {
+        case .system:
+            bridge.sendSeek(to: position)
+        case .script:
+            if let source = NowPlayingScripting.seekSource(to: position, in: info.appBundleIdentifier) {
+                _ = runScript(source)
+            }
+        case .openApp:
+            break   // can't seek a player we can't reach
+        }
+    }
+
     /// If the bridge dies (e.g. a macOS update breaks it), try again after a pause instead of spinning.
     private func scheduleRestart(libraryURL: URL) {
         guard isStarted else { return }

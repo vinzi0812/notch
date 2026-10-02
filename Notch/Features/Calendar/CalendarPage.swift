@@ -181,9 +181,14 @@ private struct MonthStrip: View {
     @Binding var selected: Date
     let busyDays: Set<Date>
     @Environment(\.notchAccent) private var accent
+    @Environment(\.hapticFeedbackEnabled) private var hapticEnabled
+    @State private var centeredDay: Date?
+    @State private var isUpdatingFromScroll = false
 
     var body: some View {
-        ScrollViewReader { proxy in
+        GeometryReader { proxy in
+            let edgePadding = max(0, (proxy.size.width - 34) / 2)
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) {
                     ForEach(month.days(), id: \.self) { day in
@@ -207,9 +212,37 @@ private struct MonthStrip: View {
                         .onTapGesture { withAnimation(.snappy) { selected = day } }
                     }
                 }
+                .padding(.horizontal, edgePadding)
+                .scrollTargetLayout()
             }
-            .onAppear { proxy.scrollTo(selected, anchor: .center) }
-            .onChange(of: selected) { withAnimation(.snappy) { proxy.scrollTo(selected, anchor: .center) } }
+            .scrollPosition(id: $centeredDay, anchor: .center)
+            .overlay(alignment: .center) {
+                Rectangle()
+                    .fill(.white.opacity(0.16))
+                    .frame(width: 1, height: 18)
+            }
+            .onAppear {
+                centeredDay = selected
+            }
+            .onChange(of: centeredDay) { _, newValue in
+                guard let newValue, newValue != selected else { return }
+                isUpdatingFromScroll = true
+                selected = newValue
+                if hapticEnabled {
+                    NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+                }
+            }
+            .onChange(of: selected) { _, newValue in
+                if isUpdatingFromScroll {
+                    isUpdatingFromScroll = false
+                    return
+                }
+                if centeredDay != newValue {
+                    withAnimation(.snappy) {
+                        centeredDay = newValue
+                    }
+                }
+            }
         }
         .frame(height: 46)
     }

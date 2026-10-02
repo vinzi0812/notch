@@ -61,6 +61,11 @@ final class NowPlayingBridgeProcess {
         try? input?.write(contentsOf: Data((command.rawValue + "\n").utf8))
     }
 
+    /// Seeks the system player to the given position in seconds.
+    func sendSeek(to position: TimeInterval) {
+        try? input?.write(contentsOf: Data("seek \(position)\n".utf8))
+    }
+
     /// Closing stdin tells the bridge to exit; terminate() covers the case where it doesn't.
     func stop() {
         output?.readabilityHandler = nil

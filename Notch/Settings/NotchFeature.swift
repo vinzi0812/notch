@@ -9,12 +9,12 @@ enum NotchFeature: String, CaseIterable, Codable, Identifiable {
     case calendar
     case files
     case nowPlaying
-    case mirror
     case systemStats
     case levels
     case devices
     case notes
     case calculator
+    case mirror
 
     var id: String { rawValue }
 

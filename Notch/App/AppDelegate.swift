@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuTrackingTasks: [Task<Void, Never>] = []
     private var dragPasteboardChangeCount = NSPasteboard(name: .drag).changeCount
     private let notifications = NotificationService()
+    private var isTrackingSwipeGesture = false
 
     override init() {
         // Before the settings load, so they load what the sandboxed version saved.
@@ -121,7 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             monitors.append(global)
         }
         
-        if let local = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged, .leftMouseDown], handler: { [weak self] event in
+        if let local = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged, .leftMouseDown, .scrollWheel], handler: { [weak self] event in
             self?.handleMouseEvent(event)
             return event
         }) {
@@ -194,14 +195,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private let swipeTracker = SwipeTracker()
+
     private func handleMouseEvent(_ event: NSEvent) {
         switch event.type {
         case .leftMouseDown:
             dragPasteboardChangeCount = NSPasteboard(name: .drag).changeCount
         case .leftMouseDragged:
             handleMouseMoved(isDraggingFile: isDraggingFile())
+        case .scrollWheel:
+            handleScrollWheel(event)
         default:
             handleMouseMoved()
+        }
+    }
+
+    private func handleScrollWheel(_ event: NSEvent) {
+        guard let viewModel, viewModel.isExpanded, viewModel.settings.swipeNavigationEnabled, !viewModel.isEditingHome, !viewModel.isEditingText else { return }
+        // Modal pages like Timer and Calendar handle their own scrolling and shouldn't swipe tabs
+        guard viewModel.selectedTabModule?.tab?.style != .page else { return }
+
+        let mouse = NSEvent.mouseLocation
+        let swipeStartRect = viewModel.geometry.panelRect
+
+        if event.phase == .began {
+            // Use the full panel, not the currently visible shape, so short pages can still start a swipe.
+            guard swipeStartRect.contains(mouse) else { return }
+            isTrackingSwipeGesture = true
+        }
+
+        guard isTrackingSwipeGesture else { return }
+
+        swipeTracker.handleScrollWheel(event) { [weak viewModel] swipedLeft in
+            guard let viewModel else { return }
+            withAnimation(NotchMotion.earHandover(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion, speed: viewModel.settings.animationSpeed.multiplier)) {
+                viewModel.navigateTab(forward: swipedLeft)
+            }
+        }
+
+        if event.phase == .ended || event.phase == .cancelled {
+            isTrackingSwipeGesture = false
         }
     }
 
@@ -311,3 +344,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
 }
+
+/// Accumulates trackpad scrollWheel deltas to trigger discrete horizontal swipe navigation.
+final class SwipeTracker {
+    private var accumulatedX: CGFloat = 0
+    private var accumulatedY: CGFloat = 0
+    private var hasTriggeredInCurrentGesture = false
+    private var lastTriggerTime: Date = .distantPast
+
+    func handleScrollWheel(_ event: NSEvent, onSwipe: (Bool) -> Void) {
+        // Ignore inertia/momentum scrolling phases so trackpad momentum doesn't cause multi-tab skipping.
+        guard event.momentumPhase == [] else { return }
+
+        if event.phase == .began {
+            accumulatedX = 0
+            accumulatedY = 0
+            hasTriggeredInCurrentGesture = false
+        }
+
+        let dx = event.hasPreciseScrollingDeltas ? event.scrollingDeltaX : event.deltaX * 10
+        let dy = event.hasPreciseScrollingDeltas ? event.scrollingDeltaY : event.deltaY * 10
+        accumulatedX += dx
+        accumulatedY += dy
+
+        if event.phase == .ended || event.phase == .cancelled {
+            accumulatedX = 0
+            accumulatedY = 0
+            hasTriggeredInCurrentGesture = false
+            return
+        }
+
+        let now = Date()
+        // Ensure strictly ONE tab move per physical swipe stroke with a 0.4s cooldown window
+        guard !hasTriggeredInCurrentGesture, now.timeIntervalSince(lastTriggerTime) > 0.4 else { return }
+
+        let threshold: CGFloat = 20
+        let absX = abs(accumulatedX)
+        let absY = abs(accumulatedY)
+
+        if absX > threshold && absX > absY * 1.2 {
+            hasTriggeredInCurrentGesture = true
+            lastTriggerTime = now
+
+            let swipedLeft: Bool
+            if event.isDirectionInvertedFromDevice {
+                swipedLeft = accumulatedX < 0
+            } else {
+                swipedLeft = accumulatedX > 0
+            }
+
+            onSwipe(swipedLeft)
+        }
+    }
+}
+

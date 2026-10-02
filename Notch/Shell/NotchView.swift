@@ -75,6 +75,7 @@ struct NotchView: View {
             .environment(\.notchAccent, viewModel.settings.accent.color)
             .environment(\.calendarLayout, viewModel.settings.calendarLayout)
             .environment(\.timerPresets, viewModel.settings.showsTimerPresets ? viewModel.settings.timerPresets.map { $0 * 60 } : [])
+            .environment(\.hapticFeedbackEnabled, viewModel.settings.hapticFeedbackEnabled)
             .contextMenu { appMenu }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -218,6 +219,19 @@ struct NotchView: View {
                     if let tab = module.tab {
                         iconButton(tab: tab, module: module)
                     }
+                }
+
+                if viewModel.settings.showsSettingsButton {
+                    Button {
+                        viewModel.onOpenSettings?()
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.caption.weight(.medium))
+                            .frame(width: 24, height: 22)
+                            .foregroundStyle(.white.opacity(0.55))
+                            .contentShape(Capsule())
+                    }
+                    .help("Settings")
                 }
             }
             .padding(.trailing, 22)
@@ -469,3 +483,8 @@ private struct TabLabelStyle: LabelStyle {
         }
     }
 }
+
+extension EnvironmentValues {
+    @Entry var hapticFeedbackEnabled: Bool = true
+}
+

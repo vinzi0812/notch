@@ -191,4 +191,32 @@ struct SeveralPlayersTests {
         #expect(opened == [web])
         #expect(scripts == 0, "never a command that could reach another app")
     }
+
+    @Test func seekingScriptablePlayerExecutesAppleScript() {
+        let monitor = NowPlayingMonitor()
+        var scripts: [String] = []
+        monitor.runScript = { scripts.append($0); return true }
+        monitor.receive(NowPlayingSnapshot(players: [player(spotify), player(web)], electedID: web))
+        monitor.select(player(spotify))
+        monitor.seek(to: 120.5)
+        #expect(scripts == [#"tell application id "com.spotify.client" to set player position to 120.5"#])
+    }
+
+    @Test func seekingUnreachablePlayerDoesNotExecuteScriptOrOpenApp() {
+        let monitor = NowPlayingMonitor()
+        var opened: [String] = []
+        var scripts: [String] = []
+        monitor.openApp = { opened.append($0) }
+        monitor.runScript = { scripts.append($0); return true }
+        monitor.receive(NowPlayingSnapshot(players: [player(web)], electedID: spotify))
+        monitor.seek(to: 60)
+        #expect(opened.isEmpty)
+        #expect(scripts.isEmpty)
+    }
+
+    @Test func seekSourceGeneratesScriptForSupportedApps() {
+        #expect(NowPlayingScripting.seekSource(to: 45.0, in: "com.spotify.client") == #"tell application id "com.spotify.client" to set player position to 45.0"#)
+        #expect(NowPlayingScripting.seekSource(to: 30.0, in: "com.apple.Music") == #"tell application id "com.apple.Music" to set player position to 30.0"#)
+        #expect(NowPlayingScripting.seekSource(to: 15.0, in: "com.google.Chrome") == nil)
+    }
 }

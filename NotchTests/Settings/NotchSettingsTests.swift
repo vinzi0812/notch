@@ -18,6 +18,10 @@ struct NotchSettingsTests {
         #expect(settings.hiddenFeatures.isEmpty)
     }
 
+    @Test func hapticsAreOffByDefault() {
+        #expect(settings().hapticFeedbackEnabled == false)
+    }
+
     @Test func hidingAndShowingAFeature() {
         let settings = settings()
         settings.setVisible(.calendar, false)
@@ -33,7 +37,7 @@ struct NotchSettingsTests {
         let settings = settings()
         // Drag Now Playing (index 4) to the top.
         settings.moveFeatures(fromOffsets: [4], toOffset: 0)
-        #expect(settings.featureOrder == [.nowPlaying, .battery, .timer, .calendar, .files, .mirror, .systemStats, .levels, .devices, .notes, .calculator])
+        #expect(settings.featureOrder == [.nowPlaying, .battery, .timer, .calendar, .files, .systemStats, .levels, .devices, .notes, .calculator, .mirror])
     }
 
     @Test func choicesSurviveARelaunch() {
@@ -59,7 +63,7 @@ struct NotchSettingsTests {
     @Test func aSavedOrderIsRepaired() {
         // From an older version (no Mirror yet), with a duplicate and a name this version doesn't know.
         defaults.set(["timer", "battery", "timer", "weather"], forKey: "settings.featureOrder")
-        #expect(settings().featureOrder == [.timer, .battery, .calendar, .files, .nowPlaying, .mirror, .systemStats, .levels, .devices, .notes, .calculator])
+        #expect(settings().featureOrder == [.timer, .battery, .calendar, .files, .nowPlaying, .systemStats, .levels, .devices, .notes, .calculator, .mirror])
     }
 
     @Test func changesAreReported() {

@@ -200,6 +200,7 @@ struct LookSettings: View {
 
             Section {
                 Toggle("Show ears when collapsed", isOn: $settings.showsEars)
+                Toggle("Show settings button in tab bar", isOn: $settings.showsSettingsButton)
             } footer: {
                 Text("The ears beside the camera show the battery, a running timer or what's playing. Pop-ups still appear when they're off.")
                     .foregroundStyle(.secondary)
@@ -234,6 +235,14 @@ struct BehaviorSettings: View {
                 .pickerStyle(.segmented)
             } footer: {
                 Text("With Reduce Motion on in System Settings, the notch fades instead of springing.")
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle("Swipe to switch tabs", isOn: $settings.swipeNavigationEnabled)
+                Toggle("Haptic feedback", isOn: $settings.hapticFeedbackEnabled)
+            } footer: {
+                Text("Swipe left or right with two fingers on the trackpad or mouse to switch tabs. Haptic feedback plays a subtle trackpad click when hitting the notch and scrolling the timer ruler.")
                     .foregroundStyle(.secondary)
             }
 
@@ -450,6 +459,7 @@ private struct NotchLookPreview: View {
     var body: some View {
         let size = CGSize(width: settings.width.points * scale, height: NotchGeometry.expandedHeight * scale)
         let radius = settings.cornerRadius * scale
+        let tabBarH: CGFloat = 32 * scale
         ZStack(alignment: .top) {
             UnevenRoundedRectangle(bottomLeadingRadius: radius, bottomTrailingRadius: radius)
                 .fill(.black)
@@ -464,6 +474,17 @@ private struct NotchLookPreview: View {
                         .frame(width: size.width * 0.6, height: 3)
                         .padding(.bottom, 22)
                 }
+                .overlay(alignment: .topTrailing) {
+                    if settings.showsSettingsButton {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 8 * scale, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .padding(.trailing, 14 * scale)
+                            .frame(height: tabBarH)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
+                .animation(.snappy, value: settings.showsSettingsButton)
             // The camera housing, for scale.
             UnevenRoundedRectangle(bottomLeadingRadius: 6, bottomTrailingRadius: 6)
                 .fill(Color(white: 0.12))

@@ -43,7 +43,7 @@ private struct ShelfSection: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topTrailing) {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: shelf.items.isEmpty ? [5, 4] : []))
                 .foregroundStyle(borderColor)
@@ -57,6 +57,7 @@ private struct ShelfSection: View {
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.6))
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack(spacing: 4) {
                     ForEach(rows, id: \.first?.id) { row in
@@ -68,6 +69,7 @@ private struct ShelfSection: View {
                     }
                 }
                 .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .opacity(rejectsDrop ? 0.3 : 1)
             }
 
@@ -75,6 +77,29 @@ private struct ShelfSection: View {
                 Text("Shelf full")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            // Clear Shelf button at top-right
+            if !shelf.items.isEmpty {
+                Button {
+                    shelf.removeAll()
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 9, weight: .semibold))
+                        Text("Clear")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .glassControl(in: Capsule())
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(6)
+                .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -112,6 +137,19 @@ private struct FileTile: View {
                 .truncationMode(.middle)
         }
         .frame(width: 60)
+        .overlay(alignment: .topTrailing) {
+            Button {
+                shelf.remove(item)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 14, height: 14)
+                    .glassControl(in: Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+        }
         .contentShape(Rectangle())
         .onDrag {
             ShelfStore.dragProvider(for: item)

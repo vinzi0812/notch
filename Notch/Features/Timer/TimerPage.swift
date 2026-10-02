@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// The timer's full-width page. While idle: a ruler to pick the length, "Start Timer", and the
@@ -146,6 +147,7 @@ struct TimerPage: View {
 /// Click and hold for half a second to zoom in 4× and choose in 15-second steps.
 struct DurationRuler: View {
     @Environment(\.notchAccent) private var accent
+    @Environment(\.hapticFeedbackEnabled) private var hapticEnabled
     @Binding var seconds: TimeInterval
 
     /// The ruler shows 0 so the scale reads naturally, but 0 can't be chosen.
@@ -236,9 +238,12 @@ struct DurationRuler: View {
             removeScrollMonitor()
             holdTask?.cancel()
         }
-        .onChange(of: selection) { _, value in
+        .onChange(of: selection) { oldValue, value in
             if value != seconds { seconds = value }
             glow(at: value)
+            if hapticEnabled, oldValue != 0 {
+                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
+            }
         }
         .onChange(of: seconds) { _, value in
             // Changed from elsewhere (e.g. the timer was reset): move the ruler to match.
@@ -246,7 +251,6 @@ struct DurationRuler: View {
             step = Self.step(for: value)
             withAnimation(.snappy) { position = value }
         }
-        .sensoryFeedback(.selection, trigger: selection)
         .sensoryFeedback(.levelChange, trigger: isFine)
     }
 

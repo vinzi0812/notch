@@ -22,6 +22,7 @@
 #include <dlfcn.h>
 
 typedef Boolean (*SendCommandFn)(int command, NSDictionary *options);
+typedef void (*SetElapsedTimeFn)(double time);
 
 static const int kCommandTogglePlayPause = 2;
 static const int kCommandNextTrack = 4;
@@ -103,15 +104,20 @@ static void Snapshot(GetClientsFn getClients, id origin, void (^completion)(NSDi
     });
 }
 
-static void ReadCommands(SendCommandFn send) {
+static void ReadCommands(SendCommandFn send, SetElapsedTimeFn setElapsed) {
     char line[64];
     while (fgets(line, sizeof line, stdin)) {
         NSString *command = [[NSString stringWithUTF8String:line] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
-        int code = [command isEqualToString:@"toggle"] ? kCommandTogglePlayPause
-                 : [command isEqualToString:@"next"] ? kCommandNextTrack
-                 : [command isEqualToString:@"previous"] ? kCommandPreviousTrack
-                 : -1;
-        if (code >= 0 && send) send(code, nil);
+        if ([command hasPrefix:@"seek "]) {
+            double position = [[command substringFromIndex:5] doubleValue];
+            if (setElapsed) setElapsed(position);
+        } else {
+            int code = [command isEqualToString:@"toggle"] ? kCommandTogglePlayPause
+                     : [command isEqualToString:@"next"] ? kCommandNextTrack
+                     : [command isEqualToString:@"previous"] ? kCommandPreviousTrack
+                     : -1;
+            if (code >= 0 && send) send(code, nil);
+        }
     }
     exit(0);
 }
@@ -121,6 +127,7 @@ __attribute__((constructor)) static void StartBridge(void) {
 
     void *mediaRemote = dlopen("/System/Library/PrivateFrameworks/MediaRemote.framework/MediaRemote", RTLD_NOW);
     SendCommandFn send = mediaRemote ? (SendCommandFn)dlsym(mediaRemote, "MRMediaRemoteSendCommand") : NULL;
+    SetElapsedTimeFn setElapsed = mediaRemote ? (SetElapsedTimeFn)dlsym(mediaRemote, "MRMediaRemoteSetElapsedTime") : NULL;
     GetClientsFn getClients = mediaRemote ? (GetClientsFn)dlsym(mediaRemote, "MRMediaRemoteGetNowPlayingClients") : NULL;
     GetOriginFn localOrigin = mediaRemote ? (GetOriginFn)dlsym(mediaRemote, "MRMediaRemoteGetLocalOrigin") : NULL;
     if (!NSClassFromString(@"MRNowPlayingRequest") || !getClients || !localOrigin) {
@@ -130,7 +137,7 @@ __attribute__((constructor)) static void StartBridge(void) {
     }
     id origin = localOrigin();
 
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{ ReadCommands(send); });
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{ ReadCommands(send, setElapsed); });
 
     __block NSData *lastLine = nil;
     __block BOOL inFlight = NO;
