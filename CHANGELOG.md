@@ -2,6 +2,14 @@
 
 All notable changes to Notch. Versions follow [Semantic Versioning](https://semver.org): new features bump the minor version, fixes bump the patch version.
 
+## Unreleased
+
+### Fixed
+- Tabs can be reordered again. Settings → Features has a **Tab Order** bar, a small copy of the notch's tab bar: drag Files and Notes, or Mirror and Calculator, sideways to change their order. The old drag-to-reorder list never moved anything.
+
+### Changed
+- The Features list is only for turning features on and off, in a fixed order, since most features (like Battery or Volume & Brightness) have no tab to order.
+
 ## 1.3.1 — 2026-10-02
 
 ### Fixed

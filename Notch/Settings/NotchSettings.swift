@@ -146,9 +146,18 @@ final class NotchSettings {
         saveFeatures()
     }
 
-    /// Same signature as `List`'s `onMove`, so the settings list can pass it straight through.
-    func moveFeatures(fromOffsets source: IndexSet, toOffset destination: Int) {
-        featureOrder.move(fromOffsets: source, toOffset: destination)
+    /// The shown features with a button on `side` of the camera, in tab bar order.
+    func tabs(on side: NotchFeature.TabSide) -> [NotchFeature] {
+        visibleFeatures.filter { $0.tabSide == side }
+    }
+
+    /// Moves `feature`'s tab to where `target`'s is, the way dropping one tab on another does.
+    /// Tabs only move within their side of the camera.
+    func moveTab(_ feature: NotchFeature, to target: NotchFeature) {
+        guard feature != target, let side = feature.tabSide, target.tabSide == side,
+              let from = featureOrder.firstIndex(of: feature),
+              let to = featureOrder.firstIndex(of: target) else { return }
+        featureOrder.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
         saveFeatures()
     }
 

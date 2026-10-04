@@ -40,7 +40,7 @@ Notch lives in the space around your camera. At rest it's just the notch, with a
 - **Mirror**: a quick look at your camera.
 
 **Yours to shape**
-- Choose which features appear and in what order, the notch's width, corners and accent color, hover delay, animation speed, and which pop-ups show.
+- Choose which features appear, the order of their tabs, the notch's width, corners and accent color, hover delay, animation speed, and which pop-ups show.
 - Liquid Glass on macOS 26 and later, Reduce Motion support, and it works on displays without a notch too.
 
 ## Screenshots

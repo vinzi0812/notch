@@ -23,6 +23,18 @@ struct NotchTabTests {
         #expect(model.tabModules.filter { $0.tab?.style == .page }.map { $0.tab?.title } == ["Timer", "Calendar"])
     }
 
+    @Test func featuresKnowWhichSideOfTheCameraTheirTabIsOn() {
+        let model = model()
+        for module in model.allModules {
+            let side: NotchFeature.TabSide? = switch module.tab?.style {
+            case .tab: .leading
+            case .button: .trailing
+            case .page, nil: nil
+            }
+            #expect(module.feature.tabSide == side, "\(module.feature)")
+        }
+    }
+
     @Test func theNotchOpensOnHome() {
         let model = model()
         model.expand()

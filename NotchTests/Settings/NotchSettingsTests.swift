@@ -29,17 +29,36 @@ struct NotchSettingsTests {
         #expect(settings.isVisible(.calendar))
     }
 
-    @Test func movingAFeatureWorksLikeAListMove() {
+    @Test func onlyFilesAndNotesAreTabsLeftOfTheCamera() {
         let settings = settings()
-        // Drag Now Playing (index 4) to the top.
-        settings.moveFeatures(fromOffsets: [4], toOffset: 0)
-        #expect(settings.featureOrder == [.nowPlaying, .battery, .timer, .calendar, .files, .mirror, .systemStats, .levels, .devices, .notes, .calculator])
+        #expect(settings.tabs(on: .leading) == [.files, .notes])
+        #expect(settings.tabs(on: .trailing) == [.mirror, .calculator])
+        settings.setVisible(.notes, false)
+        #expect(settings.tabs(on: .leading) == [.files], "hidden features have no tab")
+    }
+
+    @Test func droppingATabOnAnotherTakesItsPlace() {
+        let settings = settings()
+        settings.moveTab(.mirror, to: .calculator)
+        #expect(settings.tabs(on: .trailing) == [.calculator, .mirror])
+        settings.moveTab(.mirror, to: .calculator)
+        #expect(settings.tabs(on: .trailing) == [.mirror, .calculator], "and back again")
+        settings.moveTab(.notes, to: .files)
+        #expect(settings.tabs(on: .leading) == [.notes, .files])
+    }
+
+    @Test func tabsStayOnTheirSideOfTheCamera() {
+        let settings = settings()
+        settings.moveTab(.files, to: .calculator)
+        settings.moveTab(.battery, to: .files)
+        settings.moveTab(.files, to: .files)
+        #expect(settings.featureOrder == NotchFeature.allCases)
     }
 
     @Test func choicesSurviveARelaunch() {
         let first = settings()
         first.setVisible(.mirror, false)
-        first.moveFeatures(fromOffsets: [2], toOffset: 0)
+        first.moveTab(.calculator, to: .mirror)
 
         let relaunched = settings()
         #expect(relaunched.featureOrder == first.featureOrder)
@@ -49,7 +68,7 @@ struct NotchSettingsTests {
     @Test func resetShowsEverythingInTheDefaultOrder() {
         let settings = settings()
         settings.setVisible(.battery, false)
-        settings.moveFeatures(fromOffsets: [0], toOffset: 3)
+        settings.moveTab(.notes, to: .files)
         settings.resetFeatures()
         #expect(settings.featureOrder == NotchFeature.allCases)
         #expect(settings.hiddenFeatures.isEmpty)
@@ -67,7 +86,7 @@ struct NotchSettingsTests {
         var changes = 0
         settings.onFeaturesChanged = { changes += 1 }
         settings.setVisible(.timer, false)
-        settings.moveFeatures(fromOffsets: [0], toOffset: 2)
+        settings.moveTab(.notes, to: .files)
         settings.resetFeatures()
         #expect(changes == 3)
     }
@@ -167,9 +186,8 @@ struct FeatureVisibilityTests {
 
     @Test func modulesFollowTheUsersOrder() {
         let (model, settings) = model()
-        settings.moveFeatures(fromOffsets: [2], toOffset: 0)   // Calendar first
-        #expect(model.modules.map(\.feature).first == .calendar)
-        #expect(model.modules.map(\.feature).prefix(3) == [.calendar, .battery, .timer])
+        settings.moveTab(.calculator, to: .mirror)
+        #expect(model.tabModules.filter { $0.tab?.style == .button }.map(\.feature) == [.calculator, .mirror])
     }
 
     @Test func aHiddenFeatureLeavesTheNotch() {

@@ -18,6 +18,23 @@ enum NotchFeature: String, CaseIterable, Codable, Identifiable {
 
     var id: String { rawValue }
 
+    enum TabSide {
+        /// A labelled tab, left of the camera.
+        case leading
+        /// An icon button, right of the camera.
+        case trailing
+    }
+
+    /// Which side of the camera the feature's tab bar button sits on, or nil if it has none there.
+    /// Must match its module's `NotchTab.Style`; a test checks.
+    var tabSide: TabSide? {
+        switch self {
+        case .files, .notes: .leading
+        case .mirror, .calculator: .trailing
+        default: nil
+        }
+    }
+
     var title: String {
         switch self {
         case .battery: "Battery"
