@@ -2,7 +2,7 @@
 
 All notable changes to Notch. Versions follow [Semantic Versioning](https://semver.org): new features bump the minor version, fixes bump the patch version.
 
-## Unreleased
+## 1.4.0 — 2026-10-04
 
 ### Added
 - **Seek in Now Playing:** tap or drag the progress bar to jump within a track, for players Notch can control.
