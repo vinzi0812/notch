@@ -82,10 +82,15 @@ final class NotchSettings {
     var timerPlaysSound: Bool {
         didSet { save(timerPlaysSound, Keys.timerPlaysSound) }
     }
+    /// Font size (pt) used in the terminal page.
+    var terminalFontSize: Double {
+        didSet { save(terminalFontSize, Keys.terminalFontSize) }
+    }
 
     static let defaultTimerLength: Double = 25 * 60
     static let defaultTimerPresets: [Double] = [5, 10, 25, 45]
     static let presetRange: ClosedRange<Double> = 1...120
+    static let terminalFontSizeRange: ClosedRange<Double> = 9...16
 
     @ObservationIgnored var onTimerLengthChanged: ((Double) -> Void)?
 
@@ -130,6 +135,7 @@ final class NotchSettings {
         showsTimerPresets = defaults.object(forKey: Keys.showsTimerPresets) as? Bool ?? true
         timerNotifies = defaults.object(forKey: Keys.timerNotifies) as? Bool ?? true
         timerPlaysSound = defaults.object(forKey: Keys.timerPlaysSound) as? Bool ?? true
+        terminalFontSize = (defaults.object(forKey: Keys.terminalFontSize) as? Double)?.clamped(to: Self.terminalFontSizeRange) ?? 11
     }
 
     /// Settings kept in a throwaway domain, for tests and previews, so they never read or change the
@@ -276,6 +282,7 @@ final class NotchSettings {
         static let showsTimerPresets = "settings.showsTimerPresets"
         static let timerNotifies = "settings.timerNotifies"
         static let timerPlaysSound = "settings.timerPlaysSound"
+        static let terminalFontSize = "settings.terminalFontSize"
     }
 
     private func save(_ value: Any, _ key: String) {

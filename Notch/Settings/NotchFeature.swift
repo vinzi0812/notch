@@ -14,6 +14,7 @@ enum NotchFeature: String, CaseIterable, Codable, Identifiable {
     case devices
     case notes
     case calculator
+    case terminal
     case mirror
 
     var id: String { rawValue }
@@ -29,7 +30,7 @@ enum NotchFeature: String, CaseIterable, Codable, Identifiable {
     /// Must match its module's `NotchTab.Style`; a test checks.
     var tabSide: TabSide? {
         switch self {
-        case .files, .notes: .leading
+        case .files, .notes, .terminal: .leading
         case .mirror, .calculator: .trailing
         default: nil
         }
@@ -48,6 +49,7 @@ enum NotchFeature: String, CaseIterable, Codable, Identifiable {
         case .devices: "Devices"
         case .notes: "Notes"
         case .calculator: "Calculator"
+        case .terminal: "Terminal"
         }
     }
 
@@ -64,6 +66,7 @@ enum NotchFeature: String, CaseIterable, Codable, Identifiable {
         case .devices: "airpods.pro"
         case .notes: "note.text"
         case .calculator: NotchIcon.calculator   // our own glyph: SF Symbols has no calculator
+        case .terminal: "terminal"
         }
     }
 
@@ -80,6 +83,7 @@ enum NotchFeature: String, CaseIterable, Codable, Identifiable {
         case .devices: "AirPods and other Bluetooth devices: a pop-up when they connect, and batteries"
         case .notes: "Quick notes in their own tab, and a Home widget"
         case .calculator: "A calculator from a button beside the camera, and a Home widget"
+        case .terminal: "An embedded zsh shell, always a keystroke away"
         }
     }
 }

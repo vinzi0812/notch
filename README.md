@@ -38,6 +38,7 @@ Notch lives in the space around your camera. At rest it's just the notch, with a
 - **Notes**: quick notes you type right in the notch.
 - **Calculator** with a keypad, live results and history.
 - **Mirror**: a quick look at your camera.
+- **Terminal**: a shell inside the notch, with copy, clear and restart controls.
 
 **Yours to shape**
 - Choose which features appear, the order of their tabs, the notch's width, corners and accent color, hover delay, animation speed, swipe navigation, haptic feedback, and which pop-ups show.
@@ -105,6 +106,7 @@ Notch asks for each permission only when a feature first needs it, and every fea
 - **Edit Home**: drag widgets to move them, drag a corner to resize, tap **−** to remove, **Add Widget** to bring one back.
 - **Drag a file** toward the notch to drop it on the shelf.
 - **Tap** the timer or calendar widget to open its page.
+- **Open Terminal** from its tab to run commands. The shell stays active when you switch tabs; use Restart Session to start fresh.
 
 ## Privacy
 

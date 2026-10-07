@@ -4,7 +4,7 @@ import SwiftUI
 /// left, controls on the right, explanations under each section. The window shows them as toolbar
 /// tabs (see `SettingsWindowController`).
 enum SettingsTab: CaseIterable {
-    case features, home, look, behavior, timer, calendar
+    case features, home, look, behavior, timer, calendar, terminal
 
     var title: String {
         switch self {
@@ -13,6 +13,7 @@ enum SettingsTab: CaseIterable {
         case .look: "Look"
         case .behavior: "Behavior"
         case .timer: "Timer"
+        case .terminal: "Terminal"
         case .calendar: "Calendar"
         }
     }
@@ -24,6 +25,7 @@ enum SettingsTab: CaseIterable {
         case .look: "paintbrush"
         case .behavior: "cursorarrow.motionlines"
         case .timer: "timer"
+        case .terminal: "terminal"
         case .calendar: "calendar"
         }
     }
@@ -36,6 +38,7 @@ enum SettingsTab: CaseIterable {
         case .look: CGSize(width: 500, height: 440)
         case .behavior: CGSize(width: 500, height: 492)
         case .timer: CGSize(width: 500, height: 568)
+        case .terminal: CGSize(width: 500, height: 220)
         case .calendar: CGSize(width: 500, height: 460)
         }
     }
@@ -49,6 +52,7 @@ enum SettingsTab: CaseIterable {
             case .look: LookSettings(settings: settings)
             case .behavior: BehaviorSettings(settings: settings)
             case .timer: TimerSettings(settings: settings)
+            case .terminal: TerminalSettings(settings: settings)
             case .calendar: CalendarSettings(settings: settings)
             }
         }
@@ -131,7 +135,7 @@ private struct TabOrderBar: View {
                             .background(.white.opacity(0.18), in: Capsule())
                             .help("Home is always first")
                         HStack(spacing: spacing(.leading)) {
-                            ForEach(settings.tabs(on: .leading)) { tab($0, titled: true) }
+                            ForEach(settings.tabs(on: .leading)) { tab($0, titled: settings.tabs(on: .leading).count <= 2) }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -740,6 +744,25 @@ private struct FeatureRow: View {
         }
         .padding(.vertical, 4)
         .opacity(isOn ? 1 : 0.55)
+    }
+}
+
+struct TerminalSettings: View {
+    @Bindable var settings: NotchSettings
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Font Size") {
+                    SteppedSlider(value: $settings.terminalFontSize, in: NotchSettings.terminalFontSizeRange, step: 1) {
+                        "\(Int($0)) pt"
+                    }
+                }
+            } footer: {
+                Text("The font size used for the terminal tab.")
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }
 

@@ -35,10 +35,10 @@ struct NotchSettingsTests {
 
     @Test func onlyFilesAndNotesAreTabsLeftOfTheCamera() {
         let settings = settings()
-        #expect(settings.tabs(on: .leading) == [.files, .notes])
+        #expect(settings.tabs(on: .leading) == [.files, .notes, .terminal])
         #expect(settings.tabs(on: .trailing) == [.calculator, .mirror], "Mirror last, so swiping never passes through it")
         settings.setVisible(.notes, false)
-        #expect(settings.tabs(on: .leading) == [.files], "hidden features have no tab")
+        #expect(settings.tabs(on: .leading) == [.files, .terminal], "hidden features have no tab")
     }
 
     @Test func droppingATabOnAnotherTakesItsPlace() {
@@ -48,7 +48,7 @@ struct NotchSettingsTests {
         settings.moveTab(.mirror, to: .calculator)
         #expect(settings.tabs(on: .trailing) == [.calculator, .mirror], "and back again")
         settings.moveTab(.notes, to: .files)
-        #expect(settings.tabs(on: .leading) == [.notes, .files])
+        #expect(settings.tabs(on: .leading) == [.notes, .files, .terminal])
     }
 
     @Test func tabsStayOnTheirSideOfTheCamera() {
@@ -82,7 +82,7 @@ struct NotchSettingsTests {
     @Test func aSavedOrderIsRepaired() {
         // From an older version (no Mirror yet), with a duplicate and a name this version doesn't know.
         defaults.set(["timer", "battery", "timer", "weather"], forKey: "settings.featureOrder")
-        #expect(settings().featureOrder == [.timer, .battery, .calendar, .files, .nowPlaying, .systemStats, .levels, .devices, .notes, .calculator, .mirror])
+        #expect(settings().featureOrder == [.timer, .battery, .calendar, .files, .nowPlaying, .systemStats, .levels, .devices, .notes, .calculator, .terminal, .mirror])
     }
 
     @Test func changesAreReported() {
