@@ -19,6 +19,10 @@ enum NotchFeature: String, CaseIterable, Codable, Identifiable {
 
     var id: String { rawValue }
 
+    /// An opt-in feature starts turned off, for new installs and updates alike, until the user
+    /// turns it on in Settings. The terminal is one: a shell shouldn't appear on its own.
+    var isOptIn: Bool { self == .terminal }
+
     enum TabSide {
         /// A labelled tab, left of the camera.
         case leading
@@ -83,7 +87,7 @@ enum NotchFeature: String, CaseIterable, Codable, Identifiable {
         case .devices: "AirPods and other Bluetooth devices: a pop-up when they connect, and batteries"
         case .notes: "Quick notes in their own tab, and a Home widget"
         case .calculator: "A calculator from a button beside the camera, and a Home widget"
-        case .terminal: "An embedded zsh shell, always a keystroke away"
+        case .terminal: "Your shell in its own tab. Off until you turn it on"
         }
     }
 }

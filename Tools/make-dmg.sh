@@ -25,8 +25,6 @@ SIGNING_ARGS=()
 if [[ -n "$DEVELOPER_ID" ]]; then
     echo "→ Signing with $DEVELOPER_ID, hardened runtime on"
     SIGNING_ARGS=(CODE_SIGN_IDENTITY="$DEVELOPER_ID" CODE_SIGN_STYLE=Manual ENABLE_HARDENED_RUNTIME=YES OTHER_CODE_SIGN_FLAGS=--timestamp)
-else
-    SIGNING_ARGS=(CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO)
 fi
 xcodebuild build \
     -project "$ROOT/Notch.xcodeproj" \
@@ -39,9 +37,7 @@ xcodebuild build \
     -quiet
 
 APP="$BUILD_DIR/Build/Products/Release/Notch.app"
-if [[ -n "$DEVELOPER_ID" ]]; then
-    codesign --verify --deep --strict "$APP"
-fi
+codesign --verify --deep --strict "$APP"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 DMG="$DIST_DIR/Notch-$VERSION.dmg"
 

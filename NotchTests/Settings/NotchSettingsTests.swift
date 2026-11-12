@@ -14,12 +14,32 @@ struct NotchSettingsTests {
     @Test func everythingIsShownInTheDefaultOrderAtFirst() {
         let settings = settings()
         #expect(settings.featureOrder == NotchFeature.allCases)
-        #expect(settings.visibleFeatures == NotchFeature.allCases)
         #expect(settings.hiddenFeatures.isEmpty)
     }
 
     @Test func hapticsAreOffByDefault() {
         #expect(settings().hapticFeedbackEnabled == false)
+    }
+
+    @Test func theTerminalIsOffUntilTurnedOn() {
+        let settings = settings()
+        #expect(!settings.isVisible(.terminal))
+        #expect(!settings.visibleFeatures.contains(.terminal))
+        #expect(settings.tabs(on: .leading) == [.files, .notes])
+
+        settings.setVisible(.terminal, true)
+        #expect(settings.tabs(on: .leading) == [.files, .notes, .terminal])
+        #expect(self.settings().isVisible(.terminal), "the choice is saved")
+        #expect(settings.hiddenFeatures.isEmpty, "opt-ins are kept apart from hidden features")
+
+        settings.resetFeatures()
+        #expect(!settings.isVisible(.terminal), "reset turns it off again, as on a new install")
+        #expect(!self.settings().isVisible(.terminal))
+    }
+
+    @Test func everythingButOptInsIsShownAtFirst() {
+        let settings = settings()
+        #expect(settings.visibleFeatures == NotchFeature.allCases.filter { !$0.isOptIn })
     }
 
     @Test func hidingAndShowingAFeature() {
@@ -35,10 +55,10 @@ struct NotchSettingsTests {
 
     @Test func onlyFilesAndNotesAreTabsLeftOfTheCamera() {
         let settings = settings()
-        #expect(settings.tabs(on: .leading) == [.files, .notes, .terminal])
+        #expect(settings.tabs(on: .leading) == [.files, .notes])
         #expect(settings.tabs(on: .trailing) == [.calculator, .mirror], "Mirror last, so swiping never passes through it")
         settings.setVisible(.notes, false)
-        #expect(settings.tabs(on: .leading) == [.files, .terminal], "hidden features have no tab")
+        #expect(settings.tabs(on: .leading) == [.files], "hidden features have no tab")
     }
 
     @Test func droppingATabOnAnotherTakesItsPlace() {
@@ -48,7 +68,7 @@ struct NotchSettingsTests {
         settings.moveTab(.mirror, to: .calculator)
         #expect(settings.tabs(on: .trailing) == [.calculator, .mirror], "and back again")
         settings.moveTab(.notes, to: .files)
-        #expect(settings.tabs(on: .leading) == [.notes, .files, .terminal])
+        #expect(settings.tabs(on: .leading) == [.notes, .files])
     }
 
     @Test func tabsStayOnTheirSideOfTheCamera() {

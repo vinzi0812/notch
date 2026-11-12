@@ -201,7 +201,7 @@ struct NotchView: View {
     private var tabBar: some View {
         HStack(spacing: 0) {
             let labels = tabLabels
-            HStack(spacing: tabs(.tab).count >= 3 ? 1 : TabBarLayout.spacing) {
+            HStack(spacing: TabBarLayout.spacing) {
                 tabButton(title: "Home", symbol: "house.fill", module: nil, labels: labels)
                 ForEach(tabs(.tab).indices, id: \.self) { index in
                     let module = tabs(.tab)[index]
@@ -294,7 +294,7 @@ struct NotchView: View {
             Label(title, systemImage: symbol)
                 .labelStyle(TabLabelStyle(showsTitle: showsTitle))
                 .font(.caption.weight(.medium))
-                .padding(.horizontal, tabs(.tab).count >= 3 ? 5 : 9)
+                .padding(.horizontal, 9)
                 .padding(.vertical, 4)
                 .background { selectionPill(selected) }
                 .foregroundStyle(.white.opacity(selected ? 1 : 0.55))

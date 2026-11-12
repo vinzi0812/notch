@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct NotchTabTests {
     private func model() -> NotchViewModel {
-        NotchViewModel(geometry: .previewHardware, settings: .ephemeral())
+        NotchViewModel(geometry: .previewHardware)
     }
 
     @Test func modulesHaveNoTabAndIgnoreFileDropsByDefault() {
@@ -18,7 +18,7 @@ struct NotchTabTests {
         let model = model()
         #expect(model.shelf.tab == NotchTab(title: "Files", symbol: "tray.full.fill"))
         #expect(model.shelf.acceptsFileDrops)
-        #expect(model.tabModules.filter { $0.tab?.style == .tab }.map { $0.tab?.title } == ["Files", "Notes", "Terminal"])
+        #expect(model.tabModules.filter { $0.tab?.style == .tab }.map { $0.tab?.title } == ["Files", "Notes"])
         #expect(model.tabModules.filter { $0.tab?.style == .button }.map { $0.tab?.title } == ["Calculator", "Mirror"])
         #expect(model.tabModules.filter { $0.tab?.style == .page }.map { $0.tab?.title } == ["Timer", "Calendar"])
     }
@@ -33,6 +33,22 @@ struct NotchTabTests {
             }
             #expect(module.feature.tabSide == side, "\(module.feature)")
         }
+    }
+
+    @Test func theTerminalJoinsTheTabsOnceTurnedOn() {
+        let settings = NotchSettings.ephemeral()
+        let model = NotchViewModel(geometry: .previewHardware, settings: settings)
+        #expect(!model.tabModules.contains { $0 === model.terminal })
+
+        settings.setVisible(.terminal, true)
+        #expect(model.tabModules.filter { $0.tab?.style == .tab }.map { $0.tab?.title } == ["Files", "Notes", "Terminal"])
+
+        // Swiping reaches it after Notes, before the buttons right of the camera.
+        model.expand()
+        for _ in 0..<3 { model.navigateTab(forward: true) }
+        #expect(model.selectedTabModule === model.terminal)
+        model.navigateTab(forward: true)
+        #expect(model.selectedTabModule === model.calculator)
     }
 
     @Test func theNotchOpensOnHome() {
@@ -133,15 +149,12 @@ struct NotchTabTests {
         model.expand()
         #expect(model.selectedTab == nil)
 
-        // Forward: Home -> Shelf -> Notes -> Terminal -> Calculator -> Mirror
+        // Forward: Home -> Shelf -> Notes -> Calculator -> Mirror
         model.navigateTab(forward: true)
         #expect(model.selectedTabModule === model.shelf)
 
         model.navigateTab(forward: true)
         #expect(model.selectedTabModule === model.notes)
-
-        model.navigateTab(forward: true)
-        #expect(model.selectedTabModule === model.terminal)
 
         model.navigateTab(forward: true)
         #expect(model.selectedTabModule === model.calculator)
@@ -153,12 +166,9 @@ struct NotchTabTests {
         model.navigateTab(forward: true)
         #expect(model.selectedTabModule === model.mirror)
 
-        // Backward: Mirror -> Calculator -> Terminal -> Notes -> Shelf -> Home
+        // Backward: Mirror -> Calculator -> Notes -> Shelf -> Home
         model.navigateTab(forward: false)
         #expect(model.selectedTabModule === model.calculator)
-
-        model.navigateTab(forward: false)
-        #expect(model.selectedTabModule === model.terminal)
 
         model.navigateTab(forward: false)
         #expect(model.selectedTabModule === model.notes)

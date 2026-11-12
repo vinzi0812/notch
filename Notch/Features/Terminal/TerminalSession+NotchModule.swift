@@ -22,12 +22,7 @@ struct TerminalPage: View {
     @Environment(\.terminalFontSize) private var fontSize
     @State private var webViewRef: WKWebView?
     @State private var copied: Bool = false
-
-    // Derive a friendly shell name from the SHELL env var
-    private var shellName: String {
-        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
-        return URL(fileURLWithPath: shell).lastPathComponent
-    }
+    @Environment(\.textEditing) private var textEditing
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,7 +33,7 @@ struct TerminalPage: View {
                     Image(systemName: "terminal.fill")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.5))
-                    Text(shellName)
+                    Text(session.shellName)
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.55))
                 }
@@ -62,13 +57,13 @@ struct TerminalPage: View {
                     } label: {
                         Image(systemName: copied ? "checkmark" : "doc.on.doc")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(copied ? .green : .white.opacity(0.5))
+                            .foregroundStyle(copied ? .green : .white.opacity(session.hasSelection ? 0.5 : 0.2))
                             .frame(width: 26, height: 22)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .pointingHandCursor()
-                    .help("Copy Selection")
+                    .disabled(!session.hasSelection && !copied)
+                    .help(session.hasSelection ? "Copy Selection" : "Select text to copy it")
 
                     Button {
                         webViewRef?.evaluateJavaScript("clearTerminal()", completionHandler: nil)
@@ -80,7 +75,6 @@ struct TerminalPage: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .pointingHandCursor()
                     .help("Clear Screen")
 
                     Button {
@@ -94,7 +88,6 @@ struct TerminalPage: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .pointingHandCursor()
                     .help("Restart Session")
                 }
                 .padding(.trailing, 8)
@@ -109,7 +102,9 @@ struct TerminalPage: View {
             )
 
             // ── Terminal WebView ──────────────────────────────────────────
-            TerminalWebView(session: session, fontSize: fontSize, webViewRef: $webViewRef)
+            TerminalWebView(session: session, fontSize: fontSize, webViewRef: $webViewRef) { focused in
+                textEditing(focused)   // typing in the terminal keeps the notch open, as in Notes
+            }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(Color.black.opacity(0.55))
@@ -121,45 +116,43 @@ struct TerminalPage: View {
         .padding(.horizontal, 2)
         .padding(.vertical, 2)
         .onAppear {
-            NSApp.activate(ignoringOtherApps: true)
             if !session.isRunning { session.start() }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if let wv = webViewRef as? FocusableWKWebView { wv.focusTerminal() }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                if let wv = webViewRef as? FocusableWKWebView { wv.focusTerminal() }
-            }
         }
+        .onDisappear { textEditing(false) }
     }
 }
 
 // MARK: - FocusableWKWebView
 
+/// Takes the keyboard only when clicked, like a note. It never activates the app: the notch is a
+/// non-activating panel, so the app you were using stays the active one while you type here.
 final class FocusableWKWebView: WKWebView {
+    var onFocusChange: ((Bool) -> Void)?
+
     override var acceptsFirstResponder: Bool { true }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    func focusTerminal() {
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
-        window?.makeFirstResponder(self)
-        evaluateJavaScript("term.focus(); doFit();", completionHandler: nil)
-    }
-
     override func mouseDown(with event: NSEvent) {
         super.mouseDown(with: event)
-        focusTerminal()
+        window?.makeKey()
+        window?.makeFirstResponder(self)
+        evaluateJavaScript("term.focus();", completionHandler: nil)
     }
 
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        if window != nil {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                guard let self = self else { return }
-                self.focusTerminal()
-            }
+    override func becomeFirstResponder() -> Bool {
+        let became = super.becomeFirstResponder()
+        if became { onFocusChange?(true) }
+        return became
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned {
+            onFocusChange?(false)
+            evaluateJavaScript("term.blur();", completionHandler: nil)
         }
+        return resigned
     }
 }
 
@@ -169,6 +162,7 @@ struct TerminalWebView: NSViewRepresentable {
     let session: TerminalSession
     let fontSize: Double
     @Binding var webViewRef: WKWebView?
+    var onFocusChange: (Bool) -> Void = { _ in }
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -177,13 +171,13 @@ struct TerminalWebView: NSViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.setValue(false, forKey: "drawsBackground") // Transparent background
 
-        // Xcode may flatten synchronized-folder resources into Resources.
-        // Read the shipped HTML directly; never modify a signed app bundle.
-        let htmlURL = Bundle.main.url(forResource: "terminal", withExtension: "html", subdirectory: "xterm")
-            ?? Bundle.main.url(forResource: "terminal", withExtension: "html")
-            ?? URL(fileURLWithPath: #file).deletingLastPathComponent()
-                .appendingPathComponent("xterm/terminal.html")
-        webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
+        webView.onFocusChange = onFocusChange
+
+        // Xcode flattens synchronized-folder resources into Resources; look in both places.
+        if let htmlURL = Bundle.main.url(forResource: "terminal", withExtension: "html", subdirectory: "xterm")
+            ?? Bundle.main.url(forResource: "terminal", withExtension: "html") {
+            webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
+        }
 
         context.coordinator.webView = webView
         context.coordinator.fontSize = fontSize
@@ -226,10 +220,6 @@ struct TerminalWebView: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             webView.evaluateJavaScript("term.options.fontSize = \(fontSize); doFit();", completionHandler: nil)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak webView] in
-                guard let webView = webView as? FocusableWKWebView else { return }
-                webView.focusTerminal()
-            }
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -240,6 +230,8 @@ struct TerminalWebView: NSViewRepresentable {
                 session.webViewDidBecomeReady(generation: generation)
             } else if type == "data", let str = dict["data"] as? String {
                 session.sendData(str)
+            } else if type == "selection", let has = dict["hasSelection"] as? Bool {
+                session.hasSelection = has
             } else if type == "resize", let cols = dict["cols"] as? Int, let rows = dict["rows"] as? Int {
                 session.resize(cols: cols, rows: rows)
             }
@@ -247,29 +239,8 @@ struct TerminalWebView: NSViewRepresentable {
     }
 }
 
-// MARK: - Environment key for font size
-
-struct TerminalFontSizeKey: EnvironmentKey {
-    static let defaultValue: CGFloat = 11
-}
+// MARK: - Environment
 
 extension EnvironmentValues {
-    var terminalFontSize: CGFloat {
-        get { self[TerminalFontSizeKey.self] }
-        set { self[TerminalFontSizeKey.self] = newValue }
-    }
-}
-
-// MARK: - Pointer Cursor Extension
-
-extension View {
-    func pointingHandCursor() -> some View {
-        self.onHover { hovering in
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
-            }
-        }
-    }
+    @Entry var terminalFontSize: Double = 11
 }

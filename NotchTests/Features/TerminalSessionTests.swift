@@ -5,7 +5,8 @@ import Testing
 @MainActor
 struct TerminalSessionTests {
     @Test func shellRunsCommandsAndOutputSurvivesTabSwitch() async {
-        let session = TerminalSession()
+        // A bare shell: no login or dotfiles, so the test doesn't depend on anyone's setup.
+        let session = TerminalSession(shell: "/bin/zsh", arguments: ["-f", "-i"])
         #expect(!session.isRunning, "the shell starts only when Terminal opens")
 
         var firstOutput = Data()
@@ -27,5 +28,26 @@ struct TerminalSessionTests {
         session.sendData("exit\n")
         #expect(await eventually(timeout: .seconds(5)) { !session.isRunning })
         session.detachWebView(generation: second)
+    }
+
+    @Test func stoppingEndsTheShellAndForgetsItsOutput() async {
+        let session = TerminalSession(shell: "/bin/zsh", arguments: ["-f", "-i"])
+        var output = Data()
+        let first = session.attachWebView { output.append($0) }
+        session.start()
+        session.webViewDidBecomeReady(generation: first)
+        session.sendData("printf '%s%s\\n' STILL_ HERE\n")
+        #expect(await eventually(timeout: .seconds(10)) {
+            String(decoding: output, as: UTF8.self).contains("STILL_HERE")
+        })
+
+        session.hasSelection = true
+        session.stop()
+        #expect(!session.isRunning && !session.hasSelection)
+
+        var replayed = Data()
+        let second = session.attachWebView { replayed.append($0) }
+        session.webViewDidBecomeReady(generation: second)
+        #expect(replayed.isEmpty, "a stopped shell leaves nothing to replay")
     }
 }

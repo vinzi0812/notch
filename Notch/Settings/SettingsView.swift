@@ -119,6 +119,8 @@ private struct TabOrderBar: View {
     /// Each tab's width. Positions are worked out from these alone, never read back from the
     /// screen, so the offsets a drag applies can't feed back into them.
     @State private var widths: [NotchFeature: CGFloat] = [:]
+    /// The room left of the camera, for deciding whether the tabs' titles fit.
+    @State private var leadingRoom: CGFloat = .infinity
     @State private var drag: Drag?
 
     var body: some View {
@@ -135,10 +137,11 @@ private struct TabOrderBar: View {
                             .background(.white.opacity(0.18), in: Capsule())
                             .help("Home is always first")
                         HStack(spacing: spacing(.leading)) {
-                            ForEach(settings.tabs(on: .leading)) { tab($0, titled: settings.tabs(on: .leading).count <= 2) }
+                            ForEach(settings.tabs(on: .leading)) { tab($0, titled: leadingTabsAreTitled) }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { leadingRoom = $0 }
                     // The camera housing.
                     UnevenRoundedRectangle(bottomLeadingRadius: 8, bottomTrailingRadius: 8)
                         .fill(Color(white: 0.14))
@@ -162,6 +165,14 @@ private struct TabOrderBar: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 4)
+    }
+
+    /// Titles if they all fit left of the camera, icons alone if not, like the notch's own bar.
+    private var leadingTabsAreTitled: Bool {
+        let tabs = settings.tabs(on: .leading)
+        let home: CGFloat = 32
+        let each = tabs.map { 18 + TabBarLayout.iconTitleGap + TabBarLayout.measure($0.title) + 14 }   // icon, gap, title, padding
+        return home + each.reduce(0, +) + spacing(.leading) * CGFloat(tabs.count) <= leadingRoom
     }
 
     private func tab(_ feature: NotchFeature, titled: Bool) -> some View {

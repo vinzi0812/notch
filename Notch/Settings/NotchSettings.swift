@@ -11,6 +11,9 @@ final class NotchSettings {
     /// Every feature, in the order the user arranged them.
     private(set) var featureOrder: [NotchFeature]
     private(set) var hiddenFeatures: Set<NotchFeature>
+    /// The opt-in features (`NotchFeature.isOptIn`) the user turned on. Stored separately from
+    /// `hiddenFeatures`, whose absence means "shown", so these start off without a migration.
+    private(set) var enabledOptIns: Set<NotchFeature>
 
     /// Expanded width. Changing it resizes the panel, so it's reported through `onGeometryChanged`.
     var width: NotchWidth {
@@ -117,6 +120,7 @@ final class NotchSettings {
         self.defaults = defaults
         featureOrder = Self.normalized(order: Self.features(forKey: Keys.featureOrder, in: defaults))
         hiddenFeatures = Set(Self.features(forKey: Keys.hiddenFeatures, in: defaults))
+        enabledOptIns = Set(Self.features(forKey: Keys.enabledOptIns, in: defaults))
         // `didSet` doesn't run for assignments in init, so loading doesn't write anything back.
         width = defaults.string(forKey: Keys.width).flatMap(NotchWidth.init(rawValue:)) ?? .standard
         cornerRadius = (defaults.object(forKey: Keys.cornerRadius) as? Double)?.clamped(to: Self.cornerRadiusRange) ?? Self.defaultCornerRadius
@@ -151,15 +155,17 @@ final class NotchSettings {
 
     /// The features to show, in order.
     var visibleFeatures: [NotchFeature] {
-        featureOrder.filter { !hiddenFeatures.contains($0) }
+        featureOrder.filter(isVisible)
     }
 
     func isVisible(_ feature: NotchFeature) -> Bool {
-        !hiddenFeatures.contains(feature)
+        feature.isOptIn ? enabledOptIns.contains(feature) : !hiddenFeatures.contains(feature)
     }
 
     func setVisible(_ feature: NotchFeature, _ isVisible: Bool) {
-        if isVisible {
+        if feature.isOptIn {
+            if isVisible { enabledOptIns.insert(feature) } else { enabledOptIns.remove(feature) }
+        } else if isVisible {
             hiddenFeatures.remove(feature)
         } else {
             hiddenFeatures.insert(feature)
@@ -185,6 +191,7 @@ final class NotchSettings {
     func resetFeatures() {
         featureOrder = NotchFeature.allCases
         hiddenFeatures = []
+        enabledOptIns = []
         saveFeatures()
     }
 
@@ -265,6 +272,7 @@ final class NotchSettings {
     private enum Keys {
         static let featureOrder = "settings.featureOrder"
         static let hiddenFeatures = "settings.hiddenFeatures"
+        static let enabledOptIns = "settings.enabledOptInFeatures"
         static let width = "settings.width"
         static let cornerRadius = "settings.cornerRadius"
         static let accent = "settings.accent"
@@ -292,6 +300,7 @@ final class NotchSettings {
     private func saveFeatures() {
         defaults.set(featureOrder.map(\.rawValue), forKey: Keys.featureOrder)
         defaults.set(hiddenFeatures.map(\.rawValue).sorted(), forKey: Keys.hiddenFeatures)
+        defaults.set(enabledOptIns.map(\.rawValue).sorted(), forKey: Keys.enabledOptIns)
         onFeaturesChanged?()
     }
 

@@ -92,7 +92,6 @@
                 var el = document.getElementById('terminal-container');
                 if (!el || el.clientWidth < 40 || el.clientHeight < 40) return;
                 fitAddon.fit();
-                term.focus();
                 try { term.scrollToBottom(); } catch(e) {}
                 if (term.cols > 0 && term.rows > 0) {
                     window.webkit.messageHandlers.terminal.postMessage({ type: "resize", cols: term.cols, rows: term.rows });
@@ -133,6 +132,11 @@
                 }
             });
         }
+
+        // Tells the app whether there's a selection, so its Copy button is only live when there is.
+        term.onSelectionChange(() => {
+            window.webkit.messageHandlers.terminal.postMessage({ type: "selection", hasSelection: term.hasSelection() });
+        });
 
         function clearTerminal() {
             term.clear();

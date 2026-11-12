@@ -9,6 +9,21 @@ final class TerminalSession {
 
     // MARK: - Published state
     private(set) var isRunning = false
+    /// Whether text is selected in the terminal, so Copy has something to copy.
+    var hasSelection = false
+
+    @ObservationIgnored private let shell: String
+    @ObservationIgnored private let arguments: [String]
+
+    /// The user's login shell, started as an interactive login shell, unless told otherwise
+    /// (tests run a bare shell, so they don't depend on anyone's dotfiles).
+    init(shell: String? = nil, arguments: [String] = ["-i", "-l"]) {
+        self.shell = shell ?? ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+        self.arguments = arguments
+    }
+
+    /// The shell's name, for the page's title bar.
+    var shellName: String { URL(fileURLWithPath: shell).lastPathComponent }
 
     // Callbacks for the UI
     @ObservationIgnored private var onDataReceived: ((Data) -> Void)?
@@ -65,18 +80,14 @@ final class TerminalSession {
         var master: Int32 = 0
         var slave: Int32 = 0
         var win = winsize(ws_row: 30, ws_col: 100, ws_xpixel: 0, ws_ypixel: 0)
-        if openpty(&master, &slave, nil, nil, &win) == -1 {
-            print("Failed to openpty")
-            return
-        }
+        guard openpty(&master, &slave, nil, nil, &win) != -1 else { return }
 
         let mHandle = FileHandle(fileDescriptor: master, closeOnDealloc: true)
         let sHandle = FileHandle(fileDescriptor: slave, closeOnDealloc: true)
 
-        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let p = Process()
         p.executableURL = URL(fileURLWithPath: shell)
-        p.arguments = ["-i", "-l"]
+        p.arguments = arguments
         p.standardInput = sHandle
         p.standardOutput = sHandle
         p.standardError = sHandle
@@ -96,7 +107,6 @@ final class TerminalSession {
         do {
             try p.run()
         } catch {
-            print("Failed to start shell: \(error)")
             return
         }
 
@@ -138,14 +148,20 @@ final class TerminalSession {
         }
     }
 
-    func reset() {
+    /// Ends the shell and forgets its output. Opening the terminal starts a new one.
+    func stop() {
         outputHistory = Data()
+        hasSelection = false
         masterHandle?.readabilityHandler = nil
         process?.terminate()
         process = nil
         masterHandle = nil
         masterFD = -1
         isRunning = false
+    }
+
+    func reset() {
+        stop()
         start()
     }
 
