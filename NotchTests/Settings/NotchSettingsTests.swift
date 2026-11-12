@@ -14,12 +14,32 @@ struct NotchSettingsTests {
     @Test func everythingIsShownInTheDefaultOrderAtFirst() {
         let settings = settings()
         #expect(settings.featureOrder == NotchFeature.allCases)
-        #expect(settings.visibleFeatures == NotchFeature.allCases)
         #expect(settings.hiddenFeatures.isEmpty)
     }
 
     @Test func hapticsAreOffByDefault() {
         #expect(settings().hapticFeedbackEnabled == false)
+    }
+
+    @Test func theTerminalIsOffUntilTurnedOn() {
+        let settings = settings()
+        #expect(!settings.isVisible(.terminal))
+        #expect(!settings.visibleFeatures.contains(.terminal))
+        #expect(settings.tabs(on: .leading) == [.files, .notes])
+
+        settings.setVisible(.terminal, true)
+        #expect(settings.tabs(on: .leading) == [.files, .notes, .terminal])
+        #expect(self.settings().isVisible(.terminal), "the choice is saved")
+        #expect(settings.hiddenFeatures.isEmpty, "opt-ins are kept apart from hidden features")
+
+        settings.resetFeatures()
+        #expect(!settings.isVisible(.terminal), "reset turns it off again, as on a new install")
+        #expect(!self.settings().isVisible(.terminal))
+    }
+
+    @Test func everythingButOptInsIsShownAtFirst() {
+        let settings = settings()
+        #expect(settings.visibleFeatures == NotchFeature.allCases.filter { !$0.isOptIn })
     }
 
     @Test func hidingAndShowingAFeature() {
@@ -82,7 +102,7 @@ struct NotchSettingsTests {
     @Test func aSavedOrderIsRepaired() {
         // From an older version (no Mirror yet), with a duplicate and a name this version doesn't know.
         defaults.set(["timer", "battery", "timer", "weather"], forKey: "settings.featureOrder")
-        #expect(settings().featureOrder == [.timer, .battery, .calendar, .files, .nowPlaying, .systemStats, .levels, .devices, .notes, .calculator, .mirror])
+        #expect(settings().featureOrder == [.timer, .battery, .calendar, .files, .nowPlaying, .systemStats, .levels, .devices, .notes, .calculator, .terminal, .mirror])
     }
 
     @Test func changesAreReported() {

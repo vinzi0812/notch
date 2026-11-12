@@ -35,6 +35,22 @@ struct NotchTabTests {
         }
     }
 
+    @Test func theTerminalJoinsTheTabsOnceTurnedOn() {
+        let settings = NotchSettings.ephemeral()
+        let model = NotchViewModel(geometry: .previewHardware, settings: settings)
+        #expect(!model.tabModules.contains { $0 === model.terminal })
+
+        settings.setVisible(.terminal, true)
+        #expect(model.tabModules.filter { $0.tab?.style == .tab }.map { $0.tab?.title } == ["Files", "Notes", "Terminal"])
+
+        // Swiping reaches it after Notes, before the buttons right of the camera.
+        model.expand()
+        for _ in 0..<3 { model.navigateTab(forward: true) }
+        #expect(model.selectedTabModule === model.terminal)
+        model.navigateTab(forward: true)
+        #expect(model.selectedTabModule === model.calculator)
+    }
+
     @Test func theNotchOpensOnHome() {
         let model = model()
         model.expand()

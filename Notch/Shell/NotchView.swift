@@ -76,6 +76,7 @@ struct NotchView: View {
             .environment(\.calendarLayout, viewModel.settings.calendarLayout)
             .environment(\.timerPresets, viewModel.settings.showsTimerPresets ? viewModel.settings.timerPresets.map { $0 * 60 } : [])
             .environment(\.hapticFeedbackEnabled, viewModel.settings.hapticFeedbackEnabled)
+            .environment(\.terminalFontSize, viewModel.settings.terminalFontSize)
             .contextMenu { appMenu }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -299,6 +300,7 @@ struct NotchView: View {
                 .foregroundStyle(.white.opacity(selected ? 1 : 0.55))
                 .contentShape(Capsule())
         }
+        .help(title)
     }
 
     /// Toggles its page: opens it, or goes back to Home if it's already open.
@@ -487,4 +489,3 @@ private struct TabLabelStyle: LabelStyle {
 extension EnvironmentValues {
     @Entry var hapticFeedbackEnabled: Bool = false
 }
-

@@ -45,6 +45,7 @@ final class NotchViewModel {
     let bluetooth = BluetoothMonitor()
     let notes: NotesStore
     let calculator = CalculatorModel()
+    let terminal = TerminalSession()
     let launchAtLogin = LaunchAtLogin()
     let settings: NotchSettings
 
@@ -125,7 +126,7 @@ final class NotchViewModel {
         select(tab: target)
     }
     /// Every module, whether or not the user shows it.
-    var allModules: [any NotchModule] { [battery, timer, calendar, shelf, nowPlaying, stats, levels, bluetooth, notes, calculator, mirror] }
+    var allModules: [any NotchModule] { [battery, timer, calendar, shelf, nowPlaying, stats, levels, bluetooth, notes, calculator, terminal, mirror] }
 
     /// Home's widgets in the user's order and sizes, minus those whose feature is hidden.
     var homeWidgets: [HomeWidget] {

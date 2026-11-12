@@ -163,6 +163,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             viewModel.nowPlaying.stop()    // ends the helper process
         }
+        if !settings.isVisible(.terminal) {
+            viewModel.terminal.stop()      // ends the shell; it starts again when the tab is opened
+        }
         if settings.isVisible(.devices) {
             viewModel.bluetooth.start()    // macOS asks for Bluetooth permission the first time
         } else {

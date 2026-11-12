@@ -4,7 +4,7 @@ import SwiftUI
 /// left, controls on the right, explanations under each section. The window shows them as toolbar
 /// tabs (see `SettingsWindowController`).
 enum SettingsTab: CaseIterable {
-    case features, home, look, behavior, timer, calendar
+    case features, home, look, behavior, timer, calendar, terminal
 
     var title: String {
         switch self {
@@ -13,6 +13,7 @@ enum SettingsTab: CaseIterable {
         case .look: "Look"
         case .behavior: "Behavior"
         case .timer: "Timer"
+        case .terminal: "Terminal"
         case .calendar: "Calendar"
         }
     }
@@ -24,6 +25,7 @@ enum SettingsTab: CaseIterable {
         case .look: "paintbrush"
         case .behavior: "cursorarrow.motionlines"
         case .timer: "timer"
+        case .terminal: "terminal"
         case .calendar: "calendar"
         }
     }
@@ -36,6 +38,7 @@ enum SettingsTab: CaseIterable {
         case .look: CGSize(width: 500, height: 440)
         case .behavior: CGSize(width: 500, height: 492)
         case .timer: CGSize(width: 500, height: 568)
+        case .terminal: CGSize(width: 500, height: 220)
         case .calendar: CGSize(width: 500, height: 460)
         }
     }
@@ -49,6 +52,7 @@ enum SettingsTab: CaseIterable {
             case .look: LookSettings(settings: settings)
             case .behavior: BehaviorSettings(settings: settings)
             case .timer: TimerSettings(settings: settings)
+            case .terminal: TerminalSettings(settings: settings)
             case .calendar: CalendarSettings(settings: settings)
             }
         }
@@ -115,6 +119,8 @@ private struct TabOrderBar: View {
     /// Each tab's width. Positions are worked out from these alone, never read back from the
     /// screen, so the offsets a drag applies can't feed back into them.
     @State private var widths: [NotchFeature: CGFloat] = [:]
+    /// The room left of the camera, for deciding whether the tabs' titles fit.
+    @State private var leadingRoom: CGFloat = .infinity
     @State private var drag: Drag?
 
     var body: some View {
@@ -131,10 +137,11 @@ private struct TabOrderBar: View {
                             .background(.white.opacity(0.18), in: Capsule())
                             .help("Home is always first")
                         HStack(spacing: spacing(.leading)) {
-                            ForEach(settings.tabs(on: .leading)) { tab($0, titled: true) }
+                            ForEach(settings.tabs(on: .leading)) { tab($0, titled: leadingTabsAreTitled) }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { leadingRoom = $0 }
                     // The camera housing.
                     UnevenRoundedRectangle(bottomLeadingRadius: 8, bottomTrailingRadius: 8)
                         .fill(Color(white: 0.14))
@@ -158,6 +165,14 @@ private struct TabOrderBar: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 4)
+    }
+
+    /// Titles if they all fit left of the camera, icons alone if not, like the notch's own bar.
+    private var leadingTabsAreTitled: Bool {
+        let tabs = settings.tabs(on: .leading)
+        let home: CGFloat = 32
+        let each = tabs.map { 18 + TabBarLayout.iconTitleGap + TabBarLayout.measure($0.title) + 14 }   // icon, gap, title, padding
+        return home + each.reduce(0, +) + spacing(.leading) * CGFloat(tabs.count) <= leadingRoom
     }
 
     private func tab(_ feature: NotchFeature, titled: Bool) -> some View {
@@ -740,6 +755,25 @@ private struct FeatureRow: View {
         }
         .padding(.vertical, 4)
         .opacity(isOn ? 1 : 0.55)
+    }
+}
+
+struct TerminalSettings: View {
+    @Bindable var settings: NotchSettings
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Font Size") {
+                    SteppedSlider(value: $settings.terminalFontSize, in: NotchSettings.terminalFontSizeRange, step: 1) {
+                        "\(Int($0)) pt"
+                    }
+                }
+            } footer: {
+                Text("The font size used for the terminal tab.")
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }
 

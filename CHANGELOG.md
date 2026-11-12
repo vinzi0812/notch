@@ -2,6 +2,11 @@
 
 All notable changes to Notch. Versions follow [Semantic Versioning](https://semver.org): new features bump the minor version, fixes bump the patch version.
 
+## Unreleased
+
+### Added
+- **Terminal tab** (off by default; turn it on in Settings → Features): your login shell inside the notch, drawn with xterm.js. Click inside to type; the shell keeps running across tab switches, with buttons to copy the selection, clear the screen and restart the shell, and a font size in Settings → Terminal. Commands run with Notch's permissions.
+
 ## 1.4.0 — 2026-10-04
 
 ### Added
